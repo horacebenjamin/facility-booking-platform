@@ -1,0 +1,44 @@
+# IDEs and Editors
+.idea/
+.vscode/
+/.fleet/
+
+# Dependencies
+/vendor/
+node_modules/
+
+# Logs
+*.log
+npm-debug.log
+yarn-error.log
+
+# Laravel Specific
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/app/private
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Testing (PHPUnit)
+.phpunit.result.cache
+/.phpunit.cache/
+
+# Local Dev Tools
+Homestead.yaml
+Homestead.json
+/.vagrant
+.phpactor.json
+auth.json
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Databases
+*.sqlite
