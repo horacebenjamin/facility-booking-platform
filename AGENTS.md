@@ -33,5 +33,6 @@ docs/
 ├── discovery.md
 ├── requirements.md
 ├── design.md
+├── visual-design.md
 ├── architecture.md
 └── implementation-plan.md
