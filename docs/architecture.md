@@ -59,8 +59,9 @@ The platform should follow these principles:
 12. Optimise based on measured need rather than speculative scale.
 13. Keep the application portable even though AWS is the intended
     eventual production target.
-14. Make AI an optional force multiplier over authoritative application
-    services, not a replacement for them.
+14. Treat AI as a first-class application subsystem built over authorised,
+    authoritative application services, while keeping core operation independent
+    of provider availability.
 
 ------------------------------------------------------------------------
 
@@ -1488,10 +1489,31 @@ provider-specific operations.
 
 ## 26. Laravel AI SDK and AI Architecture
 
-The platform should be architected for optional AI-assisted capabilities
-using the **Laravel AI SDK**.
+Facility4Hire includes planned AI-assisted capabilities using the **Laravel AI
+SDK**. Runtime AI is a genuine application subsystem, implemented after the
+deterministic services it depends upon. It is not a dependency of the core MVP
+booking engine.
 
-AI is not a core dependency of the MVP booking engine.
+The intended flow is:
+
+``` text
+User
+  |
+AI Interface
+  |
+Laravel AI SDK
+  |
+AI Agent
+  |
+Authorised Application Tools
+  |
+Application / Domain Services
+  |
+Database / approved external services
+```
+
+The model never becomes a parallel application layer or an independent source
+of business truth.
 
 ### 26.1 Provider Model
 
@@ -1521,15 +1543,23 @@ Configured production provider
 
 Application business logic should not become Ollama-specific.
 
+The Laravel AI SDK is the provider abstraction and orchestration boundary.
+Provider/model selection and credentials belong in environment configuration
+and provider-specific integration code, not in domain services or prompts.
+
 ### 26.2 AI Use Cases
 
-Later AI capabilities may include:
+Planned AI capabilities include:
 
 -   summarising operational issues;
+-   producing management and operational briefings;
 -   summarising incidents;
 -   asking natural-language questions about authorised application data;
 -   explaining reporting results;
 -   summarising booking/customer history;
+-   analysing utilisation, booking patterns, cancellations and no-shows from
+    authoritative reporting results;
+-   assisting facility and availability discovery;
 -   identifying information requiring management attention.
 
 Example:
@@ -1551,8 +1581,9 @@ AI explanation
 
 ### 26.3 Tool-Based Grounding
 
-AI agents should access authoritative capabilities through controlled
-tools/services.
+AI agents access application capabilities through controlled tools. A tool is
+an adapter over an authorised application/domain service or query capability;
+it is not a second implementation of the business rule.
 
 Examples:
 
@@ -1569,12 +1600,33 @@ The LLM should not independently reproduce availability, pricing,
 payment or reporting calculations from arbitrary raw data when an
 authoritative service already exists.
 
+Tools should:
+
+-   define bounded, validated inputs;
+-   resolve the authenticated actor and relevant centre/organisation scope;
+-   enforce Policies and permissions on every call;
+-   call the existing service/query capability;
+-   return the minimum structured result needed by the agent;
+-   expose safe domain errors without leaking internal details.
+
+Agents are responsible for interpreting user intent, selecting permitted tools
+and composing a useful response. They are not responsible for persistence,
+authorisation decisions, transactional changes or authoritative calculations.
+
+Application services remain responsible for use-case orchestration and
+validation. Domain services remain responsible for deterministic business
+rules. Policies and permission checks determine access. Eloquent/persistence
+remains behind those boundaries rather than being exposed directly to the
+model.
+
 ### 26.4 Deterministic Boundaries
 
 AI must **not** replace deterministic logic for:
 
 -   availability;
 -   resource conflicts;
+-   resource allocation;
+-   equipment allocation;
 -   pricing;
 -   booking lifecycle;
 -   payments;
@@ -1583,6 +1635,12 @@ AI must **not** replace deterministic logic for:
 -   financial calculations.
 
 Alternative availability must not depend on AI.
+
+Prompts and agent instructions must not contain the only implementation of a
+business rule. Any proposed consequential action must be revalidated and
+executed through the normal authorised Action/Service, with explicit user
+confirmation where required. Model output must never be written directly as an
+authoritative state transition.
 
 ### 26.5 Authorization and Privacy
 
@@ -1602,6 +1660,10 @@ Only necessary data should be supplied to external model providers.
 Secrets, raw payment data and unnecessary personal information must not
 be exposed.
 
+Tools should return a denial or appropriately scoped empty result without
+revealing the existence of records the user cannot access. Prompt instructions
+are not an authorisation boundary.
+
 ### 26.6 Read-Only First
 
 Initial AI functionality should be read-only assistance.
@@ -1620,7 +1682,37 @@ It should not initially autonomously:
 Consequential operations remain explicit deterministic user-triggered
 Actions.
 
-### 26.7 Graceful Degradation
+### 26.7 Structured Outputs and Presentation
+
+Use structured outputs where they improve validation, reliable presentation or
+tool orchestration. Structured response schemas should be versioned and tested
+like other application boundaries.
+
+The interface may render tool-derived results using ordinary application cards,
+tables and links, alongside an AI-generated explanation. It should distinguish
+generated interpretation from authoritative record/report data where confusion
+could affect a decision.
+
+Malformed or incomplete structured output must fail validation and produce a
+safe retry/error path rather than being silently accepted.
+
+### 26.8 Auditability and Observability
+
+Record sufficient safe metadata to diagnose and audit material AI activity,
+which may include:
+
+-   authenticated user and scope;
+-   agent/workflow and tool name;
+-   safe input identifiers or correlation ID;
+-   tool outcome and duration;
+-   provider/model identifier where operationally useful;
+-   timeout, refusal and validation failures.
+
+Do not indiscriminately retain full prompts, responses, tool payloads or
+sensitive customer data. Business audit records for consequential actions remain
+separate from technical AI logs.
+
+### 26.9 Failure Handling and Graceful Degradation
 
 If Ollama or a production AI provider is unavailable:
 
@@ -1633,6 +1725,26 @@ If Ollama or a production AI provider is unavailable:
 
 AI-generated interpretations should be distinguishable from
 authoritative application records.
+
+AI calls require bounded timeouts and explicit handling for provider errors,
+tool errors, invalid structured output and partial completion. Retrying must not
+duplicate consequential effects. Failure of an AI summary or briefing is a
+secondary failure and must not roll back committed application state.
+
+### 26.10 Testing
+
+Test AI tools independently of the model, including validation, permission and
+centre/organisation scope, service reuse, structured results, data minimisation
+and error mapping.
+
+Agent/workflow tests should use faked model responses for normal automated test
+runs and cover tool selection, structured-output validation, provider failure,
+timeouts and attempts to bypass authorisation. A small separate integration
+suite may verify Ollama and configured production-provider compatibility.
+
+Deterministic domain tests remain the proof of availability, conflict,
+allocation, pricing, payment, permission and lifecycle correctness. Model tests
+must not replace them.
 
 ------------------------------------------------------------------------
 
@@ -2356,8 +2468,9 @@ The architecture is considered implementation-ready when:
 -   audit history and technical logging are separate;
 -   documents/private storage have an authorization model;
 -   external integrations have explicit boundaries;
--   AI is optional, permission-aware and grounded in authoritative
-    services;
+-   AI is a planned, provider-independent and permission-aware subsystem
+    grounded in authoritative services while core operation remains independent
+    of provider availability;
 -   testing covers the highest-risk business rules;
 -   AWS is a target without prematurely fixing compute infrastructure;
 -   deferred decisions are explicitly documented rather than silently

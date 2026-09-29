@@ -2232,33 +2232,187 @@ Trust should result from:
 
 # 54. AI UX
 
-AI is not a core UX requirement for the initial product.
+AI is a planned product capability that should be introduced after the
+deterministic booking, operations and reporting workflows it depends upon.
+It should be integrated into useful Facility4Hire workflows rather than appear
+as an unrelated generic chatbot.
 
-Critical workflows should use deterministic application logic.
+## 54.1 Access and Placement
 
-These include:
+The primary conversational pattern should be contextual and non-blocking.
 
-- availability;
-- conflict prevention;
-- pricing;
-- booking approval;
-- payment state;
-- booking-state transitions.
+On desktop and tablet, **Ask AI** should normally open in a right-hand
+slide-over/drawer. The current page should remain visible where practical so
+users can keep their task and source information in view while using the
+assistant.
 
-The MVP should not introduce an AI assistant or conversational interface merely to position the product as AI-powered.
+The assistant should inherit useful authorised context from the current page or
+record. Depending on the user's role and permissions, this may include the
+current:
 
-Potential later AI capabilities may include:
+- booking;
+- facility;
+- availability view;
+- report;
+- centre;
+- Today's Schedule.
 
-- management operational summaries;
-- utilisation insights;
-- incident summarisation;
-- facility-discovery assistance.
+The inherited context should be made clear to the user and must not include
+information outside their authorised scope.
 
-Any future AI output should remain distinguishable from authoritative booking and operational data.
+On mobile, the assistant should use a bottom sheet or an appropriate near-full-
+screen mobile drawer. The interface must not squeeze a desktop side panel into
+a narrow viewport.
 
-AI should augment users rather than become a dependency for completing essential workflows.
+The assistant should not always begin as an empty generic chat interface.
+Contextual prompts and suggested actions should help users start from their
+current task. The application as a whole must not become chat-first, and modal
+popups should not be the default conversational pattern where a non-blocking
+drawer is more appropriate.
 
-AI may still be used extensively during software development as an engineering productivity tool.
+Selected AI-generated information may also be embedded directly into high-value
+screens when it is useful without requiring conversation. Appropriate examples
+include:
+
+- Manager AI Daily Briefing on the management dashboard;
+- Leisure Assistant AI Shift Briefing within Today's Schedule;
+- natural-language facility search/discovery within public or customer
+  discovery pages.
+
+Embedded AI should be used selectively for proactive summaries and discovery.
+The slide-over/drawer remains the primary conversational interaction pattern.
+
+## 54.2 Role-Based Workflows
+
+### Customer
+
+Natural-language facility discovery/search may be embedded in appropriate
+public or customer discovery pages. Contextual **Ask AI** may open the assistant
+drawer while a customer browses facilities, availability or their bookings.
+
+AI should help customers express intent in familiar language without requiring
+them to understand Facility4Hire's internal resource model. Authoritative
+availability, pricing and booking outcomes must continue to come from the normal
+application workflow.
+
+### Manager
+
+Contextual **Ask AI** should be available from appropriate management screens
+and may use the authorised current booking, facility, centre, report or other
+relevant page context.
+
+Managers may also have a dedicated AI Assistant workspace for deeper
+cross-system analysis. A proactive Manager AI Daily Briefing may appear on the
+management dashboard.
+
+Managers should be able to ask natural-language questions such as:
+
+- Which facilities have been underutilised over the last three months?
+- Summarise today's operational issues across all centres.
+- Which centres have had the most no-shows?
+- Find suitable availability for a five-a-side football booking.
+- Summarise recent cancellation patterns.
+- What bookings or operational issues require management attention today?
+
+### Leisure Assistant
+
+Today's Schedule remains the primary operational interface. AI must not replace
+the schedule or make it harder to scan and act upon.
+
+An AI Shift Briefing may be embedded within Today's Schedule. **Ask AI** should
+open the contextual drawer on larger screens and a bottom sheet or mobile drawer
+on phones. Assistance should remain focused on authorised current operations,
+such as summarising issues or preparation information for the staff member's
+centre.
+
+Operational actions such as **Booking arrived**, **Complete booking** and
+**Mark no-show** remain explicit deterministic UI actions. The assistant must
+not expose management, financial or cross-centre data outside the leisure
+assistant's permissions.
+
+## 54.3 Interaction and Responses
+
+The AI experience should support natural-language input and retain enough
+visible conversational context for the current task without obscuring the
+underlying application context.
+
+Where page context is available, suggested actions should be specific to that
+context. Examples include:
+
+- Summarise this booking
+- Explain conflicts
+- Find alternatives
+- Explain pricing
+- What changed today?
+- What do I need to set up next?
+- Summarise this report
+- What needs my attention?
+
+Suggestions should only appear where the user is authorised and the underlying
+application services can support them.
+
+Responses should use plain language and, where useful, present tool-derived
+structured results as established cards, tables, lists, metrics or links to
+application records and reports. Users should be able to inspect the source
+record or deterministic workflow rather than rely only on a generated summary.
+
+The presentation must distinguish:
+
+- AI-generated interpretation, explanation or suggestions;
+- structured results returned by authorised application tools;
+- authoritative application state and actions.
+
+The AI response must not visually imply that a suggestion has changed a
+booking, price, payment, permission or operational state.
+
+## 54.4 Permission and Action Safety
+
+AI interactions must reflect the authenticated user's permissions, record
+ownership and centre/organisation scope. A refusal caused by insufficient
+access should be clear without revealing whether inaccessible data exists.
+
+Initial AI workflows should be read-only. If consequential actions are added
+later, the interface must present the proposed action and material effects,
+require explicit confirmation, and then use the normal authorised application
+workflow. AI-generated text alone must never represent a completed action.
+
+## 54.5 Loading, Failure and Recovery
+
+The interface should communicate when it is:
+
+- interpreting a request;
+- calling an authorised tool;
+- preparing a response;
+- waiting longer than expected.
+
+Provider, tool, timeout and invalid-response failures should use clear,
+recoverable error states. Where possible, users should be offered a retry or a
+link to the underlying deterministic screen or report.
+
+AI unavailability must not block essential booking, management or operational
+workflows. The interface should state that assistance is temporarily
+unavailable without suggesting that authoritative application data is also
+unavailable.
+
+## 54.6 Deterministic Authority
+
+AI may interpret requests, retrieve, summarise, explain and assist. Critical
+decisions remain with deterministic application/domain services, including:
+
+- availability and booking conflicts;
+- resource and equipment allocation;
+- final pricing;
+- booking approval and state transitions;
+- payment outcomes;
+- permissions and authorisation.
+
+For example, an AI agent may interpret a manager's request for a suitable
+five-a-side football slot and call an authorised availability tool. The
+availability service determines the returned options, and the ordinary booking
+workflow revalidates any later reservation.
+
+AI may still be used during software development as an engineering productivity
+tool, but that is separate from this runtime product experience.
 
 ---
 

@@ -36,3 +36,32 @@ docs/
 ├── visual-design.md
 ├── architecture.md
 └── implementation-plan.md
+```
+
+---
+
+# 2. Runtime AI Product Boundaries
+
+AI functionality is an intentional Facility4Hire product capability.
+
+Before implementing runtime AI functionality, agents must follow the approved
+scope and behaviour in:
+
+- `docs/requirements.md`;
+- `docs/design.md`;
+- `docs/visual-design.md`;
+- `docs/architecture.md`;
+- `docs/implementation-plan.md`.
+
+Agents must not invent AI features outside the documented scope or move
+deterministic domain rules into prompts, agent instructions or model output.
+
+AI tools must reuse authorised application/domain services. Model output must
+not bypass validation, Policies, permissions, authorisation, transaction
+boundaries or booking lifecycle controls.
+
+Provider- and model-specific integration code must remain appropriately
+isolated behind the documented Laravel AI SDK boundary.
+
+Core booking, availability, pricing, payment, reporting and operational
+functionality must remain usable when an AI provider is unavailable.

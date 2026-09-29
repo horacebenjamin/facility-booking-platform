@@ -203,9 +203,12 @@ Avoid embedding significant business logic directly inside UI components or cont
 
 ---
 
-## 4.6 AI Is Not Core Infrastructure
+## 4.6 AI Is a Planned Capability, Not Core Infrastructure
 
 The application must operate without an AI provider.
+
+AI is a first-class planned Facility4Hire capability, implemented after the
+deterministic domain and application services it depends upon.
 
 AI must not become authoritative for:
 
@@ -218,7 +221,15 @@ AI must not become authoritative for:
 - refunds;
 - operational closures.
 
-AI will be added only after the deterministic application is mature.
+The implementation sequence is:
+
+``` text
+Core domain
+-> application services
+-> authorised AI tools
+-> AI agents
+-> AI user experience
+```
 
 ---
 
@@ -2547,7 +2558,7 @@ The major business journeys operate successfully from beginning to end.
 
 ## Definition of Done
 
-The deterministic product is production-ready enough to begin optional AI enhancement.
+The deterministic product is production-ready enough to begin the planned AI capability.
 
 ---
 
@@ -2565,7 +2576,7 @@ Creates a foundation for useful AI assistance without making the business depend
 
 ## Requirements Covered
 
-Deferred/approved AI architecture requirements.
+AI-001, AI-002, AI-008, AI-013, AI-016, AI-017.
 
 ## Dependencies
 
@@ -2584,7 +2595,10 @@ Introduce appropriate:
 Configure:
 
 - Ollama for local development;
-- environment-driven provider configuration.
+- environment-driven provider/model configuration;
+- production-provider configuration through the Laravel AI SDK;
+- bounded timeouts and provider-failure handling;
+- structured-output validation support.
 
 Create testing boundaries so normal test runs do not require live model calls.
 
@@ -2610,7 +2624,8 @@ AI failure must not affect:
 
 ## Tests Required
 
-Test provider abstraction/configuration and fake AI interactions.
+Test provider abstraction/configuration, timeouts, failure handling, structured
+output validation and fake AI interactions.
 
 Perform limited real Ollama integration verification separately.
 
@@ -2624,7 +2639,7 @@ A clean AI integration boundary exists.
 
 ---
 
-# M29 — Ollama & Authorised AI Tooling
+# M29 — Authorised AI Tooling
 
 ## Objective
 
@@ -2636,7 +2651,7 @@ Allows AI to answer useful business questions without inventing or recalculating
 
 ## Requirements Covered
 
-Approved AI architecture and relevant SEC requirements.
+AI-003, AI-005–AI-008, AI-010–AI-012, AI-015–AI-017 and relevant SEC requirements.
 
 ## Dependencies
 
@@ -2651,6 +2666,8 @@ Initial tools may include:
 - today's operations;
 - revenue reporting;
 - utilisation reporting;
+- cancellation and no-show reporting;
+- facility and availability discovery;
 - outstanding invoices;
 - closure-affected bookings;
 - incident summaries.
@@ -2660,6 +2677,11 @@ Each tool must use existing authoritative services/query capabilities.
 Tools inherit current authenticated-user authorization.
 
 Minimise data passed to models.
+
+Define validated tool inputs and structured outputs suitable for independent
+testing and consistent UI presentation.
+
+Record safe, proportionate tool-use audit/diagnostic context where appropriate.
 
 ## Do Not Implement Yet
 
@@ -2689,7 +2711,10 @@ Test:
 - centre scope;
 - organisation scope where applicable;
 - service reuse;
-- data minimisation.
+- data minimisation;
+- structured tool results;
+- validation and error mapping;
+- audit/diagnostic context where required.
 
 ## Acceptance Criteria
 
@@ -2701,11 +2726,13 @@ The application has a safe tool layer between AI and business data.
 
 ---
 
-# M30 — Management AI Assistant
+# M30 — Management & Operations AI Assistant
 
 ## Objective
 
-Provide management with natural-language querying and summarisation of authorised operational/business information.
+Provide authorised managers, and leisure assistants where appropriate, with
+natural-language querying and summarisation of relevant operational/business
+information.
 
 ## Business Value
 
@@ -2713,7 +2740,7 @@ Reduces the time required to inspect reports and operational data and demonstrat
 
 ## Requirements Covered
 
-Approved optional AI capability.
+AI-001, AI-003, AI-004, AI-008–AI-018.
 
 ## Dependencies
 
@@ -2721,7 +2748,8 @@ M29.
 
 ## Implement
 
-Purpose-built Management assistant interface.
+Purpose-built assistant experiences integrated into relevant management and
+operations workflows rather than a generic site-wide chatbot.
 
 Initial capabilities:
 
@@ -2729,29 +2757,42 @@ Initial capabilities:
 - summarise incidents;
 - summarise outstanding invoices;
 - summarise upcoming operations;
+- summarise cancellation and no-show patterns;
 - answer revenue questions;
 - answer utilisation questions;
+- assist facility and availability discovery through the authoritative service;
 - identify closure-affected bookings;
 - search bookings.
 
 AI flow:
 
-User question  
-→ Agent  
-→ authorised Tool  
-→ authoritative Service  
-→ structured result  
-→ AI explanation.
+``` text
+User question
+-> AI Interface
+-> Laravel AI SDK
+-> Agent
+-> authorised Tool
+-> authoritative Service
+-> structured result
+-> AI explanation
+```
 
 Provide links back to underlying application records/reports where useful.
 
 Handle insufficient data explicitly.
 
+Distinguish generated explanation from authoritative tool-derived results and
+provide recovery links to normal application workflows.
+
+Provide clear loading, tool-progress, timeout, error and provider-unavailable
+states. Core management and operations workflows remain available throughout.
+
 Implement appropriate AI operational logging without unnecessarily retaining sensitive information.
 
 ## Do Not Implement Yet
 
-Autonomous consequential actions.
+Consequential actions. If later approved, these require an explicit preview and
+confirmation before the normal authorised application Action is invoked.
 
 ## Architecture Rules
 
@@ -2770,12 +2811,15 @@ AI may not independently mutate consequential business state.
 Test:
 
 - manager access;
+- authorised leisure-assistant access where implemented;
 - restricted role access;
 - tool authorization;
 - centre scope;
 - report-service reuse;
 - insufficient-data handling;
 - provider failure;
+- timeout and invalid structured-output handling;
+- graceful fallback to normal application workflows;
 - prompt-based authorization bypass attempts;
 - sensitive-data minimisation.
 
@@ -3344,14 +3388,15 @@ Production hardening:
 
 ## Phase 7
 
-AI enhancement:
+AI capability:
 
 - Laravel AI SDK;
 - Ollama development;
 - permission-aware tools;
-- Management AI Assistant.
+- Management and Operations AI Assistant.
 
-AI remains optional to core operation.
+AI remains independent of core operation and provider failure does not block
+deterministic workflows.
 
 ---
 

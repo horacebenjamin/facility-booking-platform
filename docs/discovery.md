@@ -1362,7 +1362,13 @@ Potential later capabilities include:
 - external accounting integration;
 - calendar integration;
 - SMS;
-- optional AI-assisted search or administrative workflows.
+- planned AI-assisted search, operational insight and administrative workflows.
+
+AI assistance is a modern Facility4Hire product decision rather than a
+historical requirement. The historical problems identified in this document
+can be solved by the deterministic booking and operations platform without AI.
+The planned AI capability is intended to help authorised users query,
+understand and summarise the operational data produced by that platform.
 
 ---
 
@@ -1418,6 +1424,11 @@ Examples:
 - live staff dashboard;
 - organisation user roles;
 - digital incident reporting.
+- AI-assisted access to authorised booking and operational information.
+
+Where AI is used, deterministic application and domain services remain
+authoritative for availability, conflicts, allocation, pricing, payments,
+permissions and booking state.
 
 ### TBD / configurable
 
@@ -1535,8 +1546,9 @@ The case study should show the ability to:
 6. design improved workflows;
 7. model complex booking rules;
 8. design a production-style architecture;
-9. use AI-assisted development responsibly;
-10. deliver software tied to measurable business value.
+9. integrate applied AI capabilities with controlled application services;
+10. use AI-assisted development responsibly;
+11. deliver software tied to measurable business value.
 
 The portfolio narrative should focus on solving an operational business problem rather than presenting the project as a generic booking-system tutorial.
 

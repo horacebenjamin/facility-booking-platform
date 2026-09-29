@@ -1967,7 +1967,138 @@ Components should reference tokens rather than repeatedly introducing arbitrary 
 
 ---
 
-# 65. AI Coding Agent Rules
+# 65. AI-Assisted Experience Pattern
+
+AI-assisted interfaces must use the existing Facility4Hire visual system,
+application shell, typography, spacing, colour, card, table, form, alert and
+confirmation patterns. AI must not introduce a separate visual language or an
+experimental chatbot aesthetic.
+
+The primary conversational surface is a contextual right-hand
+slide-over/drawer on desktop and tablet. It should preserve visibility of the
+current page where practical rather than replace the user's workflow with a
+generic chat screen.
+
+On mobile, use a bottom sheet or an appropriate near-full-screen mobile drawer.
+Do not compress the desktop drawer into a narrow column and do not use a centred
+modal popup as the default conversational surface.
+
+A dedicated management AI Assistant workspace may support deeper cross-system
+analysis. Selected AI summaries and discovery controls may also be embedded in
+high-value screens, including the Manager AI Daily Briefing, Leisure Assistant
+AI Shift Briefing and natural-language facility discovery. Embedded AI should
+use existing card, alert, search and content patterns.
+
+## 65.1 Prompt and Response
+
+The drawer/sheet header should identify the assistant, provide a clearly
+labelled close control and show useful authorised context such as the current
+booking, facility, report, centre or Today's Schedule. Context should be concise
+and visually distinct from the conversation.
+
+The prompt control should have a visible label, clear submission action and
+helpful example prompts appropriate to the user's role. Suggested prompts may
+help users begin but must not compete with the primary input or imply unsupported
+capabilities.
+
+When context is available, the initial surface should offer relevant suggested
+actions instead of always presenting an empty conversation. Examples include:
+
+- Summarise this booking
+- Explain conflicts
+- Find alternatives
+- Explain pricing
+- What changed today?
+- What do I need to set up next?
+- Summarise this report
+- What needs my attention?
+
+AI responses should:
+
+- be visibly identified as AI-generated where relevant;
+- use readable text hierarchy;
+- separate generated explanation from authoritative tool-derived data;
+- use established result cards, lists, tables, metrics and status badges for
+  structured data;
+- link to underlying authorised records or reports where useful;
+- avoid presenting generated prose as a confirmed application action.
+
+Authoritative values such as availability, booking state, price and payment
+state should use the same established components and terminology as elsewhere
+in the application.
+
+## 65.2 Tool and Action Progress
+
+While an agent is working, the interface should provide concise progress such
+as retrieving bookings, checking authorised availability or preparing a
+summary. Progress must be understandable without exposing internal chain-of-
+thought, raw prompts, tool payloads or technical provider details.
+
+Loading and longer-running states should use established spinner, skeleton and
+progress patterns. Controls should prevent accidental duplicate submissions
+while a request is active and should provide an accessible status announcement.
+
+## 65.3 Errors and Provider Unavailability
+
+Tool, permission, timeout and invalid-response errors should use the existing
+inline alert/error patterns and explain the available next step.
+
+If the AI provider is unavailable, the surface should clearly state that AI
+assistance is temporarily unavailable and, where useful, link to the normal
+report, search or workflow. It must not imply that core application data or
+booking functionality is unavailable.
+
+## 65.4 Suggested and Consequential Actions
+
+Suggested actions should be visually secondary until the user chooses to act.
+They must be labelled as suggestions where confusion is possible.
+
+Embedded briefings should provide a concise summary, clear AI-generated label,
+relevant source links and an **Ask AI** entry point where conversation would add
+value. They must not visually displace the screen's authoritative status or
+primary deterministic actions.
+
+On Today's Schedule, **Booking arrived**, **Complete booking** and **Mark
+no-show** remain normal explicit operational controls outside the AI
+conversation.
+
+If consequential AI-assisted actions are introduced in an approved later
+scope, the existing confirmation-dialog pattern must show the authoritative
+action, affected record and material effects before submission. The final
+application outcome should be displayed using normal success, conflict or error
+patterns rather than an AI response alone.
+
+## 65.5 Responsive and Accessible Behaviour
+
+At desktop and tablet widths, the right-hand drawer should be wide enough for
+readable responses and structured results while retaining useful current-page
+context. The layout should adapt when the remaining page area would become
+unusable.
+
+On smaller screens, use a bottom sheet or near-full-screen mobile drawer with a
+clear drag/close affordance where appropriate. Prompt controls, structured
+results, source links and confirmation actions must remain usable without
+horizontal scrolling.
+
+AI-assisted experiences must meet the same WCAG 2.2 AA target as the rest of
+the product, including:
+
+- keyboard operation and logical focus order;
+- deliberate focus placement when the drawer/sheet opens;
+- appropriate focus containment for the chosen drawer/sheet behaviour;
+- returning focus to the invoking control when it closes;
+- visible focus;
+- an always-available keyboard-operable close control;
+- accessible drawer/sheet names, labels and instructions;
+- Escape-key closing where it does not interrupt a consequential action;
+- status announcements for loading and completed responses;
+- text alternatives for non-text content;
+- meaning that does not depend on colour, animation or icons alone;
+- restrained motion and support for reduced-motion preferences.
+
+---
+
+# 66. AI Coding Agent Rules
 
 When implementing UI, AI coding agents MUST:
 
@@ -1993,7 +2124,7 @@ If the required behaviour is unclear, the agent should identify the ambiguity ra
 
 ---
 
-# 66. Visual Acceptance Criteria
+# 67. Visual Acceptance Criteria
 
 A UI implementation should not be considered complete merely because the page renders.
 
@@ -2042,7 +2173,7 @@ Before completion, verify:
 
 ---
 
-# 67. Visual Design Change Control
+# 68. Visual Design Change Control
 
 Small visual refinements may be made during implementation without updating this document.
 
@@ -2068,7 +2199,7 @@ If the change alters user behaviour rather than only visual presentation, `desig
 
 ---
 
-# 68. Final Design Principle
+# 69. Final Design Principle
 
 The visual system should support the underlying business objective:
 
@@ -2080,7 +2211,7 @@ The interface should make the right action obvious, the current state understand
 
 ---
 
-# 69. Design Status
+# 70. Design Status
 
 The representative visual-design phase is complete.
 

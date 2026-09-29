@@ -1176,8 +1176,9 @@ The following capabilities are not required for the initial MVP unless later pro
 
 - native mobile applications;
 - SMS notifications;
-- advanced AI assistants;
-- AI-dependent availability recommendations;
+- authoritative availability recommendations calculated by AI rather than the
+  availability service;
+- autonomous consequential AI actions beyond the approved AI requirements;
 - advanced waiting-list automation;
 - sophisticated accounting integrations;
 - advanced analytics;
@@ -1189,7 +1190,163 @@ The following capabilities are not required for the initial MVP unless later pro
 
 ---
 
-# 39. Open Product Decisions
+# 39. AI-Assisted Capabilities
+
+AI is a planned first-class Facility4Hire capability, delivered after the
+authoritative booking, operations and reporting services on which it depends.
+It is not part of the initial core-booking MVP acceptance outcome.
+
+## AI-001 — Planned AI Assistance
+
+The system MUST provide useful AI-assisted workflows for authorised users in a
+later implementation phase.
+
+AI assistance MUST address documented booking, reporting or operational needs
+rather than exist only as a generic chatbot or technology demonstration.
+
+## AI-002 — Laravel AI SDK
+
+Runtime AI capabilities MUST use the Laravel AI SDK as the application AI
+integration layer.
+
+Provider-specific code SHOULD remain isolated behind that integration layer.
+
+## AI-003 — Authorised Access
+
+Only authenticated users with the relevant permissions and data scope MUST be
+able to access protected AI capabilities.
+
+Initial access SHOULD prioritise managers. Leisure assistants MAY receive
+focused operational assistance where it supports their documented duties and
+centre access. Customer-facing AI assistance is not required for the initial AI
+phase.
+
+## AI-004 — Natural-Language Queries
+
+Authorised users MUST be able to ask natural-language questions over
+appropriate booking, operational and reporting information.
+
+## AI-005 — Tool-Enabled Agents
+
+AI agents MUST access application information and capabilities through a
+controlled set of authorised tools.
+
+Tools MUST have explicit inputs and outputs and SHOULD return structured data
+where appropriate.
+
+## AI-006 — Service Reuse
+
+AI tools MUST call existing application/domain services or authorised query
+services rather than duplicate business rules in prompts, tools or model
+instructions.
+
+## AI-007 — Permission Enforcement
+
+Every AI tool call MUST enforce the same server-side policies, permissions,
+ownership and centre/organisation scope that apply outside the AI interface.
+
+The model's request or output MUST NOT be treated as authorisation.
+
+## AI-008 — Structured Outputs
+
+AI workflows SHOULD use structured outputs where they improve validation,
+consistent presentation, tool orchestration or safe integration with the
+application interface.
+
+## AI-009 — Summaries and Briefings
+
+The AI capability MUST support representative management summaries and
+operational briefings grounded in authorised application data.
+
+## AI-010 — Analysis Assistance
+
+The AI capability SHOULD assist authorised users in interpreting utilisation,
+booking patterns, cancellations and no-shows using metrics supplied by
+authoritative reporting services.
+
+AI MUST NOT independently define or recalculate authoritative reporting
+metrics where an application service provides them.
+
+## AI-011 — Facility and Availability Discovery
+
+The AI capability SHOULD assist users in finding suitable facilities and
+availability from natural-language criteria.
+
+Any availability presented MUST come from the authoritative availability
+service and MUST be revalidated through the normal booking workflow before a
+reservation is created.
+
+## AI-012 — Deterministic Authority
+
+AI MAY interpret requests, retrieve information, summarise information,
+explain information and assist users.
+
+AI MUST NOT independently determine authoritative:
+
+- availability;
+- booking conflicts;
+- resource allocation;
+- equipment allocation;
+- final prices;
+- payment outcomes;
+- permissions;
+- booking state or state transitions.
+
+These remain responsibilities of deterministic application/domain services.
+Model output MUST NOT bypass application validation, policies, authorisation or
+transactional controls.
+
+## AI-013 — Errors and Unavailability
+
+The AI interface MUST handle model, provider, tool, timeout and invalid
+structured-output failures clearly without presenting incomplete or invented
+results as authoritative.
+
+Users SHOULD receive a useful recovery path, such as retrying or opening the
+underlying deterministic screen or report.
+
+## AI-014 — Consequential Actions
+
+Initial AI capabilities SHOULD be read-only.
+
+If consequential AI-assisted actions are introduced later, the system MUST
+show the proposed action and its material effects, require appropriate user
+confirmation, revalidate authorisation and business rules, and execute the
+action through the normal application service.
+
+## AI-015 — Auditability
+
+Consequential AI-assisted actions and material tool use MUST be auditable where
+appropriate, including the authenticated user, tool/action, outcome and safe
+correlation context.
+
+Audit records MUST avoid unnecessary prompt content or sensitive model data.
+
+## AI-016 — Data Protection
+
+AI workflows MUST minimise the application and customer data supplied to a
+model provider.
+
+Secrets, raw payment-card data and information outside the user's authorised
+scope MUST NOT be supplied to the model.
+
+## AI-017 — Graceful Degradation
+
+Failure or unavailability of an AI provider MUST NOT prevent users completing
+core booking, availability, pricing, payment, invoicing, reporting or
+operational workflows through the normal application interfaces.
+
+## AI-018 — Response Provenance
+
+The interface MUST distinguish AI-generated interpretation or suggestions from
+authoritative application data where confusion could affect a user decision.
+
+Where useful, AI responses SHOULD link users to the underlying record, report
+or workflow.
+
+---
+
+# 40. Open Product Decisions
 
 The following decisions remain intentionally open and must be resolved before the affected feature is implemented:
 
@@ -1231,7 +1388,7 @@ Define demonstration equipment inventories.
 
 ---
 
-# 40. MVP Scope Principle
+# 41. MVP Scope Principle
 
 The initial MVP is intended to prove the core end-to-end business workflow rather than implement every requirement in this specification simultaneously.
 
@@ -1260,7 +1417,7 @@ Later implementation planning will divide the MVP into smaller milestones so tha
 
 ---
 
-# 41. MVP Acceptance Outcome
+# 42. MVP Acceptance Outcome
 
 The MVP will be considered functionally successful when the following end-to-end scenario can be demonstrated:
 
@@ -1286,7 +1443,7 @@ This end-to-end workflow is more important to the MVP than implementing every se
 
 ---
 
-# 42. Requirements Change Control
+# 43. Requirements Change Control
 
 New ideas discovered during design or implementation MUST NOT automatically become MVP requirements.
 
@@ -1303,7 +1460,7 @@ Material requirement changes should update this document before implementation s
 
 ---
 
-# 43. Traceability
+# 44. Traceability
 
 Requirements should be referenced from later project documentation where useful.
 
@@ -1319,7 +1476,7 @@ This provides traceability from business need through implementation and verific
 
 ---
 
-# 44. Next Step
+# 45. Next Step
 
 Once this requirements document has been reviewed and approved, the next stage is UX/design discovery.
 
