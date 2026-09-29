@@ -755,9 +755,164 @@ The aim is to demonstrate the ability to build AI-augmented business application
 
 ---
 
-## Installation
+## Local Development
 
-Application installation instructions will be added once the initial Laravel application foundation has been implemented.
+### Prerequisites
+
+The recommended development environment is:
+
+- Docker Desktop with WSL 2 integration;
+- Git;
+- a WSL 2 Linux distribution.
+
+PHP, Composer, Node.js, MySQL and Redis are provided through the project's Docker-based development environment. Compatible host installations are therefore not required for normal development.
+
+### First-Time Setup
+
+1. Clone and enter the repository:
+
+   ```bash
+   git clone https://github.com/horacebenjamin/facility-booking-platform.git
+   cd facility-booking-platform
+   ```
+
+2. Create the environment file:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Install PHP dependencies using the Laravel Sail Composer image:
+
+   ```bash
+   docker run --rm \
+     -u "$(id -u):$(id -g)" \
+     -v "$PWD:/opt" \
+     -w /opt \
+     laravelsail/php84-composer:latest \
+     composer install --ignore-platform-reqs
+   ```
+
+4. Start Sail:
+
+   ```bash
+   ./vendor/bin/sail up -d
+   ```
+
+5. Generate the application key:
+
+   ```bash
+   ./vendor/bin/sail artisan key:generate
+   ```
+
+6. Run database migrations:
+
+   ```bash
+   ./vendor/bin/sail artisan migrate
+   ```
+
+7. Install frontend dependencies:
+
+   ```bash
+   ./vendor/bin/sail npm install
+   ```
+
+8. Build frontend assets:
+
+   ```bash
+   ./vendor/bin/sail npm run build
+   ```
+
+The application is then available at [http://localhost](http://localhost).
+
+### Starting the Application
+
+Start the Docker-based development environment:
+
+```bash
+./vendor/bin/sail up -d
+```
+
+For frontend development with Vite:
+
+```bash
+./vendor/bin/sail npm run dev
+```
+
+To stop the environment:
+
+```bash
+./vendor/bin/sail down
+```
+
+### Quality Checks
+
+Frontend formatting and linting:
+
+```bash
+./vendor/bin/sail npm run check
+```
+
+Frontend TypeScript checking:
+
+```bash
+./vendor/bin/sail npm run types:check
+```
+
+PHP formatting:
+
+```bash
+./vendor/bin/sail composer lint:check
+```
+
+PHP static analysis:
+
+```bash
+./vendor/bin/sail composer types:check
+```
+
+Automated tests:
+
+```bash
+./vendor/bin/sail artisan test
+```
+
+Complete project CI checks:
+
+```bash
+./vendor/bin/sail composer ci:check
+```
+
+Production frontend build:
+
+```bash
+./vendor/bin/sail npm run build
+```
+
+### Development Stack
+
+The current application foundation includes:
+
+- Laravel;
+- PHP;
+- Laravel Sail;
+- MySQL;
+- Redis;
+- Inertia.js;
+- Vue 3;
+- TypeScript;
+- Tailwind CSS;
+- shadcn-style Vue components;
+- Laravel Fortify authentication;
+- two-factor authentication;
+- passkey support;
+- PHPUnit;
+- Laravel Pint;
+- PHPStan;
+- Vite+ frontend tooling;
+- GitHub Actions continuous integration.
+
+Additional application dependencies will be introduced incrementally according to the implementation plan rather than installed upfront.
 
 ---
 
