@@ -39,6 +39,14 @@ class AllocationUnit extends Model
     }
 
     /**
+     * @return BelongsToMany<AllocationOccupancy, $this>
+     */
+    public function occupancies(): BelongsToMany
+    {
+        return $this->belongsToMany(AllocationOccupancy::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
