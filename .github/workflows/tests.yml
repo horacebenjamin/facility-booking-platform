@@ -54,6 +54,12 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Create testing database
+        run: >-
+          mysql --host=127.0.0.1 --user=root --password=password
+          --execute="CREATE DATABASE IF NOT EXISTS testing;
+          GRANT ALL PRIVILEGES ON testing.* TO 'facility4hire'@'%';"
+
       - name: Setup Application
         run: composer setup
 
