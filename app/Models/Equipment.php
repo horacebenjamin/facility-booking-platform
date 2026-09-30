@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -37,6 +38,14 @@ class Equipment extends Model
     public function facility(): BelongsTo
     {
         return $this->belongsTo(Facility::class);
+    }
+
+    /**
+     * @return HasMany<EquipmentAllocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(EquipmentAllocation::class);
     }
 
     /**
