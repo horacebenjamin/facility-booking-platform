@@ -57,6 +57,14 @@ class Facility extends Model
     }
 
     /**
+     * @return HasMany<FacilityBookableHour, $this>
+     */
+    public function bookableHours(): HasMany
+    {
+        return $this->hasMany(FacilityBookableHour::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

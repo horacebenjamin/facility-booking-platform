@@ -42,6 +42,14 @@ class Centre extends Model
     }
 
     /**
+     * @return HasMany<CentreOperatingHour, $this>
+     */
+    public function operatingHours(): HasMany
+    {
+        return $this->hasMany(CentreOperatingHour::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

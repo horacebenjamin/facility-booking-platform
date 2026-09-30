@@ -26,6 +26,8 @@ class ResourceFactory extends Factory
             'slug' => Str::slug($name),
             'description' => fake()->optional()->paragraph(),
             'capacity' => fake()->optional()->numberBetween(1, 500),
+            'setup_minutes' => 0,
+            'cleanup_minutes' => 0,
             'is_active' => true,
         ];
     }

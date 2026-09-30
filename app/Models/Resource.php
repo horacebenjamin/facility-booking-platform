@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use InvalidArgumentException;
 
 /**
@@ -17,9 +18,11 @@ use InvalidArgumentException;
  * @property string $slug
  * @property string|null $description
  * @property int|null $capacity
+ * @property int $setup_minutes
+ * @property int $cleanup_minutes
  * @property bool $is_active
  */
-#[Fillable(['facility_id', 'name', 'slug', 'description', 'capacity', 'is_active'])]
+#[Fillable(['facility_id', 'name', 'slug', 'description', 'capacity', 'setup_minutes', 'cleanup_minutes', 'is_active'])]
 class Resource extends Model
 {
     /** @use HasFactory<ResourceFactory> */
@@ -39,6 +42,14 @@ class Resource extends Model
     public function allocationUnits(): BelongsToMany
     {
         return $this->belongsToMany(AllocationUnit::class)->withPivot('facility_id');
+    }
+
+    /**
+     * @return HasMany<ResourceBookableHour, $this>
+     */
+    public function bookableHours(): HasMany
+    {
+        return $this->hasMany(ResourceBookableHour::class);
     }
 
     public function syncAllocationUnits(AllocationUnit ...$allocationUnits): void
@@ -61,6 +72,8 @@ class Resource extends Model
     {
         return [
             'capacity' => 'integer',
+            'setup_minutes' => 'integer',
+            'cleanup_minutes' => 'integer',
             'is_active' => 'boolean',
         ];
     }
