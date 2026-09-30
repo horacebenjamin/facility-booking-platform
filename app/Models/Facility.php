@@ -49,6 +49,14 @@ class Facility extends Model
     }
 
     /**
+     * @return HasMany<Equipment, $this>
+     */
+    public function equipment(): HasMany
+    {
+        return $this->hasMany(Equipment::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
