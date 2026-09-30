@@ -65,6 +65,14 @@ class Facility extends Model
     }
 
     /**
+     * @return HasMany<AvailabilityBlock, $this>
+     */
+    public function availabilityBlocks(): HasMany
+    {
+        return $this->hasMany(AvailabilityBlock::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

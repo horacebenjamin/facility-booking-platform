@@ -52,6 +52,14 @@ class Resource extends Model
         return $this->hasMany(ResourceBookableHour::class);
     }
 
+    /**
+     * @return HasMany<AvailabilityBlock, $this>
+     */
+    public function availabilityBlocks(): HasMany
+    {
+        return $this->hasMany(AvailabilityBlock::class);
+    }
+
     public function syncAllocationUnits(AllocationUnit ...$allocationUnits): void
     {
         foreach ($allocationUnits as $allocationUnit) {

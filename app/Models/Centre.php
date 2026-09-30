@@ -51,6 +51,14 @@ class Centre extends Model
     }
 
     /**
+     * @return HasMany<AvailabilityBlock, $this>
+     */
+    public function availabilityBlocks(): HasMany
+    {
+        return $this->hasMany(AvailabilityBlock::class);
+    }
+
+    /**
      * @return BelongsToMany<User, $this>
      */
     public function assignedUsers(): BelongsToMany
