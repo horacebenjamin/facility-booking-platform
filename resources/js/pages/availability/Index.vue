@@ -16,12 +16,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { check as checkAvailability } from '@/routes/availability';
+import { quote as quotePricing } from '@/routes/pricing';
 import type {
     AvailabilityReason,
     AvailabilityResponse,
     Centre,
     Equipment,
     Facility,
+    PricingResponse,
     Resource,
 } from '@/types/availability';
 
@@ -40,9 +42,12 @@ const startsAt = ref('');
 const endsAt = ref('');
 const selectedEquipment = ref<Record<number, number>>({});
 const result = ref<AvailabilityResponse | null>(null);
+const quote = ref<PricingResponse | null>(null);
 const fieldErrors = ref<Record<string, string>>({});
 const requestError = ref('');
+const quoteError = ref('');
 const isChecking = ref(false);
+const isQuoting = ref(false);
 const requestVersion = ref(0);
 
 const facilitiesForCentre = computed(() =>
@@ -77,6 +82,16 @@ const selectedEquipmentItems = computed(() =>
         })),
 );
 
+const selectedCentre = computed(() =>
+    props.centres.find((centre) => centre.id === selectedCentreId.value),
+);
+
+const selectedFacility = computed(() =>
+    props.facilities.find(
+        (facility) => facility.id === selectedFacilityId.value,
+    ),
+);
+
 const duration = computed(() => {
     if (!selectedDate.value || !startsAt.value || !endsAt.value) {
         return null;
@@ -106,7 +121,11 @@ const duration = computed(() => {
 function clearAvailabilityState(): void {
     requestVersion.value += 1;
     result.value = null;
+    quote.value = null;
     requestError.value = '';
+    quoteError.value = '';
+    isChecking.value = false;
+    isQuoting.value = false;
 }
 
 function clearFieldError(field: string): void {
@@ -178,6 +197,20 @@ const resultReasons = computed(() => {
 
 function dateTime(date: string, time: string): string {
     return `${date} ${time.length === 5 ? `${time}:00` : time}`;
+}
+
+function selectionPayload(): {
+    resource_id: number | null;
+    starts_at: string;
+    ends_at: string;
+    equipment: { equipment_id: number; quantity: number }[];
+} {
+    return {
+        resource_id: selectedResourceId.value,
+        starts_at: dateTime(selectedDate.value, startsAt.value),
+        ends_at: dateTime(selectedDate.value, endsAt.value),
+        equipment: selectedEquipmentItems.value,
+    };
 }
 
 function csrfToken(): string | undefined {
@@ -261,6 +294,104 @@ function isAvailabilityResponse(
     );
 }
 
+function isPricingResponse(payload: unknown): payload is PricingResponse {
+    if (
+        typeof payload !== 'object' ||
+        payload === null ||
+        !('data' in payload) ||
+        typeof payload.data !== 'object' ||
+        payload.data === null
+    ) {
+        return false;
+    }
+
+    const data = payload.data;
+
+    return (
+        'currency' in data &&
+        'duration_seconds' in data &&
+        'resource' in data &&
+        'equipment' in data &&
+        'subtotal_minor' in data &&
+        'calculated_total_minor' in data &&
+        'final_total_minor' in data &&
+        typeof data.currency === 'string' &&
+        typeof data.duration_seconds === 'number' &&
+        Array.isArray(data.equipment) &&
+        typeof data.subtotal_minor === 'number' &&
+        typeof data.calculated_total_minor === 'number' &&
+        typeof data.final_total_minor === 'number'
+    );
+}
+
+function formatMoney(amountMinor: number, currency: string): string {
+    return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency,
+    }).format(amountMinor / 100);
+}
+
+function formatDuration(durationSeconds: number): string {
+    const minutes = Math.round(durationSeconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    return [
+        hours > 0 ? `${hours} hour${hours === 1 ? '' : 's'}` : '',
+        remainingMinutes > 0
+            ? `${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'}`
+            : '',
+    ]
+        .filter(Boolean)
+        .join(' ');
+}
+
+async function requestQuote(
+    version: number,
+    selection: ReturnType<typeof selectionPayload>,
+): Promise<void> {
+    isQuoting.value = true;
+    const pricingRoute = quotePricing();
+
+    try {
+        const response = await fetch(pricingRoute.url, {
+            method: pricingRoute.method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                ...(csrfToken() ? { 'X-XSRF-TOKEN': csrfToken() } : {}),
+            },
+            body: JSON.stringify(selection),
+        });
+        const payload: unknown = await response.json();
+
+        if (version !== requestVersion.value) {
+            return;
+        }
+
+        if (!response.ok || !isPricingResponse(payload)) {
+            quoteError.value =
+                'Pricing is not available for this selection right now.';
+
+            return;
+        }
+
+        quote.value = payload;
+    } catch {
+        if (version !== requestVersion.value) {
+            return;
+        }
+
+        quoteError.value =
+            'Pricing is not available for this selection right now.';
+    } finally {
+        if (version === requestVersion.value) {
+            isQuoting.value = false;
+        }
+    }
+}
+
 async function submit(): Promise<void> {
     clearAvailabilityState();
 
@@ -270,6 +401,7 @@ async function submit(): Promise<void> {
 
     isChecking.value = true;
     const version = requestVersion.value;
+    const selection = selectionPayload();
 
     try {
         const response = await fetch(checkAvailability.url(), {
@@ -280,12 +412,7 @@ async function submit(): Promise<void> {
                 'Content-Type': 'application/json',
                 ...(csrfToken() ? { 'X-XSRF-TOKEN': csrfToken() } : {}),
             },
-            body: JSON.stringify({
-                resource_id: selectedResourceId.value,
-                starts_at: dateTime(selectedDate.value, startsAt.value),
-                ends_at: dateTime(selectedDate.value, endsAt.value),
-                equipment: selectedEquipmentItems.value,
-            }),
+            body: JSON.stringify(selection),
         });
         const payload: unknown = await response.json();
 
@@ -310,6 +437,13 @@ async function submit(): Promise<void> {
 
         fieldErrors.value = {};
         result.value = payload;
+
+        if (!payload.data.available) {
+            return;
+        }
+
+        isChecking.value = false;
+        await requestQuote(version, selection);
     } catch {
         if (version !== requestVersion.value) {
             return;
@@ -318,7 +452,9 @@ async function submit(): Promise<void> {
         requestError.value =
             'We could not check availability right now. Please try again.';
     } finally {
-        isChecking.value = false;
+        if (version === requestVersion.value) {
+            isChecking.value = false;
+        }
     }
 }
 
@@ -576,7 +712,7 @@ watch(
                                 ></CardTitle
                             >
                             <CardDescription
-                                >Request equipment for this booking if you need
+                                >Add equipment to this selection if you need
                                 it.</CardDescription
                             >
                         </CardHeader>
@@ -652,27 +788,197 @@ watch(
                     <Button
                         type="submit"
                         class="w-full sm:w-auto"
-                        :disabled="isChecking"
+                        :disabled="isChecking || isQuoting"
                     >
-                        <Spinner v-if="isChecking" />
+                        <Spinner v-if="isChecking || isQuoting" />
                         {{
                             isChecking
                                 ? 'Checking availability…'
-                                : 'Check availability'
+                                : isQuoting
+                                  ? 'Calculating price…'
+                                  : 'Check availability'
                         }}
                     </Button>
-                    <p v-if="isChecking" class="sr-only" role="status">
-                        Checking current availability.
+                    <p
+                        v-if="isChecking || isQuoting"
+                        class="sr-only"
+                        role="status"
+                    >
+                        {{
+                            isChecking
+                                ? 'Checking current availability.'
+                                : 'Calculating the estimated price.'
+                        }}
                     </p>
                 </form>
             </section>
 
-            <aside class="lg:pt-28" aria-live="polite">
+            <aside class="space-y-4 lg:pt-28" aria-live="polite">
                 <AvailabilityResult
                     v-if="result"
                     :result="result"
                     :reasons="resultReasons"
                 />
+                <Card v-if="quote">
+                    <CardHeader>
+                        <CardTitle>Estimated price</CardTitle>
+                        <CardDescription>
+                            Estimated price for this selection.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent class="space-y-5">
+                        <dl class="grid gap-3 text-sm">
+                            <div class="grid gap-1">
+                                <dt class="text-muted-foreground">Centre</dt>
+                                <dd class="font-medium">
+                                    {{ selectedCentre?.name }}
+                                </dd>
+                            </div>
+                            <div class="grid gap-1">
+                                <dt class="text-muted-foreground">Facility</dt>
+                                <dd class="font-medium">
+                                    {{ selectedFacility?.name }}
+                                </dd>
+                            </div>
+                            <div class="grid gap-1">
+                                <dt class="text-muted-foreground">
+                                    Bookable option
+                                </dt>
+                                <dd class="font-medium">
+                                    {{ quote.data.resource.name }}
+                                </dd>
+                            </div>
+                            <div class="grid gap-1">
+                                <dt class="text-muted-foreground">Date</dt>
+                                <dd class="font-medium">
+                                    {{ selectedDate }}
+                                </dd>
+                            </div>
+                            <div class="grid gap-1">
+                                <dt class="text-muted-foreground">Time</dt>
+                                <dd class="font-medium">
+                                    {{ startsAt }}–{{ endsAt }}
+                                </dd>
+                            </div>
+                            <div class="grid gap-1">
+                                <dt class="text-muted-foreground">Duration</dt>
+                                <dd class="font-medium">
+                                    {{
+                                        formatDuration(
+                                            quote.data.duration_seconds,
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <div class="space-y-3 border-t pt-4">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="font-medium">
+                                        {{ quote.data.resource.name }}
+                                    </p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{
+                                            formatMoney(
+                                                quote.data.resource
+                                                    .hourly_rate_minor,
+                                                quote.data.currency,
+                                            )
+                                        }}
+                                        per hour
+                                    </p>
+                                </div>
+                                <p class="font-medium">
+                                    {{
+                                        formatMoney(
+                                            quote.data.resource.amount_minor,
+                                            quote.data.currency,
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <div
+                                v-for="item in quote.data.equipment"
+                                :key="item.name"
+                                class="flex items-start justify-between gap-4"
+                            >
+                                <div>
+                                    <p class="font-medium">
+                                        {{ item.name }} × {{ item.quantity }}
+                                    </p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{
+                                            item.charge_type === 'included'
+                                                ? 'Included'
+                                                : formatMoney(
+                                                      item.hourly_rate_minor,
+                                                      quote.data.currency,
+                                                  ) + ' per hour'
+                                        }}
+                                    </p>
+                                </div>
+                                <p class="font-medium">
+                                    {{
+                                        item.charge_type === 'included'
+                                            ? 'Included'
+                                            : formatMoney(
+                                                  item.amount_minor,
+                                                  quote.data.currency,
+                                              )
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 border-t pt-4 text-sm">
+                            <div class="flex justify-between gap-4">
+                                <span>Subtotal</span>
+                                <span>{{
+                                    formatMoney(
+                                        quote.data.subtotal_minor,
+                                        quote.data.currency,
+                                    )
+                                }}</span>
+                            </div>
+                            <div
+                                v-if="quote.data.discount_minor !== null"
+                                class="flex justify-between gap-4"
+                            >
+                                <span>Discount</span>
+                                <span>{{
+                                    formatMoney(
+                                        -quote.data.discount_minor,
+                                        quote.data.currency,
+                                    )
+                                }}</span>
+                            </div>
+                            <div
+                                class="flex justify-between gap-4 border-t pt-2 text-base font-semibold"
+                            >
+                                <span>Estimated total</span>
+                                <span>{{
+                                    formatMoney(
+                                        quote.data.final_total_minor,
+                                        quote.data.currency,
+                                    )
+                                }}</span>
+                            </div>
+                        </div>
+
+                        <p class="text-sm text-muted-foreground">
+                            Availability and pricing will be rechecked when you
+                            submit a booking request.
+                        </p>
+                    </CardContent>
+                </Card>
+                <Alert
+                    v-else-if="result?.data.available && quoteError"
+                    variant="destructive"
+                >
+                    <AlertTitle>Pricing is unavailable</AlertTitle>
+                    <AlertDescription>{{ quoteError }}</AlertDescription>
+                </Alert>
                 <Alert v-else-if="requestError" variant="destructive">
                     <AlertTitle>We need a little more information.</AlertTitle>
                     <AlertDescription>{{ requestError }}</AlertDescription>

@@ -39,3 +39,28 @@ export interface AvailabilityResponse {
         reasons: AvailabilityReason[];
     };
 }
+
+export interface PricingResponse {
+    data: {
+        currency: string;
+        duration_seconds: number;
+        resource: {
+            name: string;
+            hourly_rate_minor: number;
+            rate_unit: 'hour';
+            amount_minor: number;
+        };
+        equipment: Array<{
+            name: string;
+            quantity: number;
+            charge_type: 'included' | 'separately_chargeable';
+            hourly_rate_minor: number;
+            rate_unit: 'hour';
+            amount_minor: number;
+        }>;
+        subtotal_minor: number;
+        discount_minor: number | null;
+        calculated_total_minor: number;
+        final_total_minor: number;
+    };
+}
