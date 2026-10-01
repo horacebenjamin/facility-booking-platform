@@ -60,6 +60,14 @@ class Resource extends Model
         return $this->hasMany(AvailabilityBlock::class);
     }
 
+    /**
+     * @return HasMany<ResourceRate, $this>
+     */
+    public function rates(): HasMany
+    {
+        return $this->hasMany(ResourceRate::class);
+    }
+
     public function syncAllocationUnits(AllocationUnit ...$allocationUnits): void
     {
         foreach ($allocationUnits as $allocationUnit) {

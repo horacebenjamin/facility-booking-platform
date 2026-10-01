@@ -34,6 +34,7 @@ class SystemRoleSeeder extends Seeder
             'invoices.view',
             'invoices.manage',
             'facilities.manage',
+            'pricing.manage',
             'closures.manage',
             'incidents.manage',
             'reports.view',

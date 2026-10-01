@@ -7,10 +7,12 @@ use App\Models\AllocationUnit;
 use App\Models\Centre;
 use App\Models\CentreOperatingHour;
 use App\Models\Equipment;
+use App\Models\EquipmentRate;
 use App\Models\Facility;
 use App\Models\FacilityBookableHour;
 use App\Models\Resource;
 use App\Models\ResourceBookableHour;
+use App\Models\ResourceRate;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -97,25 +99,45 @@ class VenueDevelopmentSeeder extends Seeder
         $pitchB = $this->seedAllocationUnit($astroPitch, 'B', 'Pitch B');
         $meetingRoomSpace = $this->seedAllocationUnit($meetingRoom, 'ROOM', 'Meeting Room Space');
 
-        $this->seedResource($sportsHall, 'whole-sports-hall', 'Whole Sports Hall', 120, 15, 15, $hallSectionA, $hallSectionB, $hallSectionC, $hallSectionD);
-        $this->seedResource($sportsHall, 'court-1', 'Court 1', 30, 0, 0, $hallSectionA);
-        $this->seedResource($sportsHall, 'court-2', 'Court 2', 30, 0, 0, $hallSectionB);
-        $this->seedResource($sportsHall, 'court-3', 'Court 3', 30, 0, 0, $hallSectionC);
-        $this->seedResource($sportsHall, 'court-4', 'Court 4', 30, 0, 0, $hallSectionD);
-        $this->seedResource($studio, 'activity-studio', 'Activity Studio', 30, 5, 10, $studioSpace);
-        $this->seedResource($astroPitch, 'full-astro-pitch', 'Full Astro Pitch', 40, 10, 10, $pitchA, $pitchB);
-        $this->seedResource($astroPitch, 'half-pitch-a', 'Half Pitch A', 20, 0, 5, $pitchA);
-        $this->seedResource($astroPitch, 'half-pitch-b', 'Half Pitch B', 20, 0, 5, $pitchB);
-        $this->seedResource($meetingRoom, 'meeting-room', 'Meeting Room', 20, 5, 5, $meetingRoomSpace);
+        $wholeSportsHall = $this->seedResource($sportsHall, 'whole-sports-hall', 'Whole Sports Hall', 120, 15, 15, $hallSectionA, $hallSectionB, $hallSectionC, $hallSectionD);
+        $courtOne = $this->seedResource($sportsHall, 'court-1', 'Court 1', 30, 0, 0, $hallSectionA);
+        $courtTwo = $this->seedResource($sportsHall, 'court-2', 'Court 2', 30, 0, 0, $hallSectionB);
+        $courtThree = $this->seedResource($sportsHall, 'court-3', 'Court 3', 30, 0, 0, $hallSectionC);
+        $courtFour = $this->seedResource($sportsHall, 'court-4', 'Court 4', 30, 0, 0, $hallSectionD);
+        $activityStudio = $this->seedResource($studio, 'activity-studio', 'Activity Studio', 30, 5, 10, $studioSpace);
+        $fullAstroPitch = $this->seedResource($astroPitch, 'full-astro-pitch', 'Full Astro Pitch', 40, 10, 10, $pitchA, $pitchB);
+        $halfPitchA = $this->seedResource($astroPitch, 'half-pitch-a', 'Half Pitch A', 20, 0, 5, $pitchA);
+        $halfPitchB = $this->seedResource($astroPitch, 'half-pitch-b', 'Half Pitch B', 20, 0, 5, $pitchB);
+        $meetingRoomResource = $this->seedResource($meetingRoom, 'meeting-room', 'Meeting Room', 20, 5, 5, $meetingRoomSpace);
 
-        $this->seedEquipment($hillside, null, 'Folding tables', 12, true, 'Centre-level tables for community activities.');
-        $this->seedEquipment($hillside, null, 'Portable PA system', 1, true, 'Centre-level sound system for events and classes.');
-        $this->seedEquipment($hillside, $sportsHall, 'Badminton nets', 4, true, 'Sports Hall inventory.');
-        $this->seedEquipment($hillside, $sportsHall, 'Basketball hoops', 2, true, 'Sports Hall inventory.');
-        $this->seedEquipment($riverside, null, 'Training cones', 40, true, 'Centre-level coaching equipment.');
-        $this->seedEquipment($riverside, null, 'Folding chairs', 30, true, 'Centre-level seating for activities and meetings.');
-        $this->seedEquipment($riverside, $astroPitch, 'Football goals', 4, true, 'Astro Pitch inventory.');
-        $this->seedEquipment($riverside, $meetingRoom, 'Portable projector', 1, false, 'Fictional inactive item awaiting maintenance.');
+        $this->seedResourceRate($wholeSportsHall, 7200);
+        $this->seedResourceRate($courtOne, 1850);
+        $this->seedResourceRate($courtTwo, 1850);
+        $this->seedResourceRate($courtThree, 1850);
+        $this->seedResourceRate($courtFour, 1850);
+        $this->seedResourceRate($activityStudio, 3200);
+        $this->seedResourceRate($fullAstroPitch, 6800);
+        $this->seedResourceRate($halfPitchA, 3800);
+        $this->seedResourceRate($halfPitchB, 3800);
+        $this->seedResourceRate($meetingRoomResource, 2400);
+
+        $foldingTables = $this->seedEquipment($hillside, null, 'Folding tables', 12, true, 'Centre-level tables for community activities.');
+        $portablePaSystem = $this->seedEquipment($hillside, null, 'Portable PA system', 1, true, 'Centre-level sound system for events and classes.');
+        $badmintonNets = $this->seedEquipment($hillside, $sportsHall, 'Badminton nets', 4, true, 'Sports Hall inventory.');
+        $basketballHoops = $this->seedEquipment($hillside, $sportsHall, 'Basketball hoops', 2, true, 'Sports Hall inventory.');
+        $trainingCones = $this->seedEquipment($riverside, null, 'Training cones', 40, true, 'Centre-level coaching equipment.');
+        $foldingChairs = $this->seedEquipment($riverside, null, 'Folding chairs', 30, true, 'Centre-level seating for activities and meetings.');
+        $footballGoals = $this->seedEquipment($riverside, $astroPitch, 'Football goals', 4, true, 'Astro Pitch inventory.');
+        $portableProjector = $this->seedEquipment($riverside, $meetingRoom, 'Portable projector', 1, false, 'Fictional inactive item awaiting maintenance.');
+
+        $this->seedEquipmentRate($foldingTables, 'separately_chargeable', 200);
+        $this->seedEquipmentRate($portablePaSystem, 'separately_chargeable', 1500);
+        $this->seedEquipmentRate($badmintonNets, 'included', 0);
+        $this->seedEquipmentRate($basketballHoops, 'included', 0);
+        $this->seedEquipmentRate($trainingCones, 'included', 0);
+        $this->seedEquipmentRate($foldingChairs, 'separately_chargeable', 100);
+        $this->seedEquipmentRate($footballGoals, 'included', 0);
+        $this->seedEquipmentRate($portableProjector, 'separately_chargeable', 800);
 
         $this->seedStaff($hillside, $riverside);
     }
@@ -196,6 +218,33 @@ class VenueDevelopmentSeeder extends Seeder
         return Equipment::query()->updateOrCreate(
             ['centre_id' => $centre->id, 'facility_id' => $facility?->id, 'name' => $name],
             ['description' => $description, 'quantity' => $quantity, 'is_active' => $isActive],
+        );
+    }
+
+    private function seedResourceRate(Resource $resource, int $amountMinor): void
+    {
+        ResourceRate::query()->updateOrCreate(
+            ['resource_id' => $resource->id, 'effective_from' => '2026-01-01'],
+            [
+                'amount_minor' => $amountMinor,
+                'currency' => 'GBP',
+                'rate_unit' => 'hour',
+                'effective_until' => null,
+            ],
+        );
+    }
+
+    private function seedEquipmentRate(Equipment $equipment, string $chargeType, int $amountMinor): void
+    {
+        EquipmentRate::query()->updateOrCreate(
+            ['equipment_id' => $equipment->id, 'effective_from' => '2026-01-01'],
+            [
+                'charge_type' => $chargeType,
+                'amount_minor' => $amountMinor,
+                'currency' => 'GBP',
+                'rate_unit' => 'hour',
+                'effective_until' => null,
+            ],
         );
     }
 

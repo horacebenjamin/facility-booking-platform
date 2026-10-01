@@ -49,6 +49,14 @@ class Equipment extends Model
     }
 
     /**
+     * @return HasMany<EquipmentRate, $this>
+     */
+    public function rates(): HasMany
+    {
+        return $this->hasMany(EquipmentRate::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
