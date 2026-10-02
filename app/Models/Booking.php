@@ -80,6 +80,22 @@ class Booking extends Model
     }
 
     /**
+     * @return HasOne<AllocationOccupancy, $this>
+     */
+    public function allocationOccupancy(): HasOne
+    {
+        return $this->hasOne(AllocationOccupancy::class);
+    }
+
+    /**
+     * @return HasMany<EquipmentAllocation, $this>
+     */
+    public function equipmentAllocations(): HasMany
+    {
+        return $this->hasMany(EquipmentAllocation::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

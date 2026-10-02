@@ -11,17 +11,35 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property int|null $booking_id
+ * @property int|null $booking_equipment_id
  * @property int $equipment_id
  * @property int $quantity
  * @property Carbon $starts_at
  * @property Carbon $ends_at
  * @property Carbon|null $expires_at
  */
-#[Fillable(['equipment_id', 'quantity', 'starts_at', 'ends_at', 'expires_at'])]
+#[Fillable(['booking_id', 'booking_equipment_id', 'equipment_id', 'quantity', 'starts_at', 'ends_at', 'expires_at'])]
 class EquipmentAllocation extends Model
 {
     /** @use HasFactory<EquipmentAllocationFactory> */
     use HasFactory;
+
+    /**
+     * @return BelongsTo<Booking, $this>
+     */
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class);
+    }
+
+    /**
+     * @return BelongsTo<BookingEquipment, $this>
+     */
+    public function bookingEquipment(): BelongsTo
+    {
+        return $this->belongsTo(BookingEquipment::class);
+    }
 
     /**
      * @return BelongsTo<Equipment, $this>

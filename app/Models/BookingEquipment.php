@@ -47,6 +47,14 @@ class BookingEquipment extends Model
     }
 
     /**
+     * @return HasOne<EquipmentAllocation, $this>
+     */
+    public function allocation(): HasOne
+    {
+        return $this->hasOne(EquipmentAllocation::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

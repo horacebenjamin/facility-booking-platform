@@ -3,6 +3,7 @@
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\CheckAvailabilityController;
 use App\Http\Controllers\QuotePricingController;
+use App\Http\Controllers\StoreBookingRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -13,6 +14,7 @@ Route::post('pricing/quote', QuotePricingController::class)->name('pricing.quote
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::post('bookings', StoreBookingRequestController::class)->name('bookings.store');
 });
 
 require __DIR__.'/settings.php';
