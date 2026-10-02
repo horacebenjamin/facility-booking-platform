@@ -18,6 +18,7 @@ use App\Services\AvailabilityService;
 use App\Services\EquipmentRequirement;
 use Carbon\CarbonImmutable;
 use Closure;
+use Database\Seeders\SystemRoleSeeder;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -34,6 +35,9 @@ class MySqlBookingConcurrencyTest extends TestCase
      * @var list<string>
      */
     private const ConcurrentTables = [
+        'model_has_roles',
+        'model_has_permissions',
+        'role_has_permissions',
         'allocation_occupancy_allocation_unit',
         'equipment_allocations',
         'allocation_occupancies',
@@ -41,6 +45,7 @@ class MySqlBookingConcurrencyTest extends TestCase
         'booking_price_snapshots',
         'booking_equipment',
         'bookings',
+        'booking_series',
         'activity_log',
         'allocation_unit_resource',
         'equipment_rates',
@@ -53,6 +58,8 @@ class MySqlBookingConcurrencyTest extends TestCase
         'facilities',
         'centres',
         'users',
+        'roles',
+        'permissions',
     ];
 
     protected function setUp(): void
@@ -208,8 +215,36 @@ class MySqlBookingConcurrencyTest extends TestCase
         $this->assertStringContainsString('order by `id` asc', $equipmentLock);
     }
 
+    public function test_competing_one_off_and_recurring_requests_cannot_both_reserve_the_same_capacity(): void
+    {
+        $fixture = $this->onConcurrentConnection(fn (): array => $this->bookableFixture());
+        $this->onConcurrentConnection(function () use ($fixture): void {
+            $this->seed(SystemRoleSeeder::class);
+            $fixture['customer']->assignRole('customer');
+        });
+
+        $outcomes = $this->submitConcurrently(
+            $fixture['customer']->id,
+            $fixture['resource']->id,
+            $fixture['customer']->id,
+            $fixture['resource']->id,
+            secondRecurring: true,
+        );
+
+        $this->assertExactlyOneSucceeded($outcomes);
+        $recurringSucceeded = collect($outcomes)->contains(
+            static fn (array $outcome): bool => isset($outcome['series_id']),
+        );
+        $expectedBookingCount = $recurringSucceeded ? 2 : 1;
+
+        $this->assertSame($recurringSucceeded ? 1 : 0, $this->countRows('booking_series'));
+        $this->assertSame($expectedBookingCount, $this->countRows('bookings'));
+        $this->assertSame($expectedBookingCount, $this->countRows('allocation_occupancies'));
+        $this->assertSame($expectedBookingCount, $this->countRows('booking_price_snapshots'));
+    }
+
     /**
-     * @param  list<array{outcome: string, booking_id?: int}>  $outcomes
+     * @param  list<array{outcome: string, booking_id?: int, series_id?: int}>  $outcomes
      */
     private function assertExactlyOneSucceeded(array $outcomes): void
     {
@@ -238,7 +273,7 @@ class MySqlBookingConcurrencyTest extends TestCase
     /**
      * @param  list<array{equipment_id: int, quantity: int}>  $firstEquipment
      * @param  list<array{equipment_id: int, quantity: int}>  $secondEquipment
-     * @return list<array{outcome: string, booking_id?: int}>
+     * @return list<array{outcome: string, booking_id?: int, series_id?: int}>
      */
     private function submitConcurrently(
         int $firstCustomerId,
@@ -247,6 +282,8 @@ class MySqlBookingConcurrencyTest extends TestCase
         int $secondResourceId,
         array $firstEquipment = [],
         array $secondEquipment = [],
+        bool $firstRecurring = false,
+        bool $secondRecurring = false,
     ): array {
         $server = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
         $this->assertNotFalse($server, "Could not create the booking concurrency barrier: {$errorMessage} ({$errorCode}).");
@@ -254,8 +291,8 @@ class MySqlBookingConcurrencyTest extends TestCase
         $barrierAddress = stream_socket_get_name($server, false);
         $this->assertNotFalse($barrierAddress);
 
-        $firstProcess = $this->startWorker('first', $barrierAddress, $firstCustomerId, $firstResourceId, $firstEquipment);
-        $secondProcess = $this->startWorker('second', $barrierAddress, $secondCustomerId, $secondResourceId, $secondEquipment);
+        $firstProcess = $this->startWorker('first', $barrierAddress, $firstCustomerId, $firstResourceId, $firstEquipment, $firstRecurring);
+        $secondProcess = $this->startWorker('second', $barrierAddress, $secondCustomerId, $secondResourceId, $secondEquipment, $secondRecurring);
         $workers = [$firstProcess, $secondProcess];
 
         $barrierSockets = [];
@@ -283,11 +320,19 @@ class MySqlBookingConcurrencyTest extends TestCase
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
      * @return array{command: list<string>, identifier: string, process: resource, stdout: resource, stderr: resource}
      */
-    private function startWorker(string $identifier, string $barrierAddress, int $customerId, int $resourceId, array $equipmentSelections): array
-    {
+    private function startWorker(
+        string $identifier,
+        string $barrierAddress,
+        int $customerId,
+        int $resourceId,
+        array $equipmentSelections,
+        bool $recurring = false,
+    ): array {
         $command = [
             PHP_BINARY,
-            base_path('tests/Support/run-concurrent-booking-submission.php'),
+            base_path($recurring
+                ? 'tests/Support/run-concurrent-recurring-booking-submission.php'
+                : 'tests/Support/run-concurrent-booking-submission.php'),
             $identifier,
             "tcp://{$barrierAddress}",
             (string) $customerId,
@@ -318,7 +363,7 @@ class MySqlBookingConcurrencyTest extends TestCase
 
     /**
      * @param  array{command: list<string>, identifier: string, process: resource, stdout: resource, stderr: resource}  $worker
-     * @return array{outcome: string, booking_id?: int}
+     * @return array{outcome: string, booking_id?: int, series_id?: int}
      */
     private function finishWorker(array $worker): array
     {
@@ -333,7 +378,7 @@ class MySqlBookingConcurrencyTest extends TestCase
         $exitCode = proc_close($worker['process']);
         $this->assertSame(0, $exitCode, $this->formatWorkerOutput($worker, $stdout, $stderr, $status, $exitCode));
 
-        /** @var array{outcome: string, booking_id?: int} $result */
+        /** @var array{outcome: string, booking_id?: int, series_id?: int} $result */
         $result = json_decode($stdout, true, flags: JSON_THROW_ON_ERROR);
 
         return $result;

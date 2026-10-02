@@ -17,6 +17,8 @@ use Spatie\Activitylog\Models\Activity;
 
 /**
  * @property int $id
+ * @property int|null $booking_series_id
+ * @property int|null $occurrence_index
  * @property string $reference
  * @property int $customer_id
  * @property int $centre_id
@@ -27,7 +29,7 @@ use Spatie\Activitylog\Models\Activity;
  * @property BookingStatus $status
  * @property FinancialStatus $financial_status
  */
-#[Fillable(['reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status'])]
+#[Fillable(['booking_series_id', 'occurrence_index', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status'])]
 class Booking extends Model
 {
     /** @use HasFactory<BookingFactory> */
@@ -63,6 +65,14 @@ class Booking extends Model
     public function resource(): BelongsTo
     {
         return $this->belongsTo(Resource::class);
+    }
+
+    /**
+     * @return BelongsTo<BookingSeries, $this>
+     */
+    public function series(): BelongsTo
+    {
+        return $this->belongsTo(BookingSeries::class, 'booking_series_id');
     }
 
     /**
@@ -113,6 +123,7 @@ class Booking extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'occurrence_index' => 'integer',
             'status' => BookingStatus::class,
             'financial_status' => FinancialStatus::class,
         ];

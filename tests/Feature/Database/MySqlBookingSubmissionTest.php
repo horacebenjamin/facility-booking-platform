@@ -149,12 +149,22 @@ class MySqlBookingSubmissionTest extends TestCase
         $this->actingAs($customer)->postJson(route('bookings.store'), [
             ...$this->payload($fixture['resource']),
             'customer_id' => $otherCustomer->id,
+            'booking_series_id' => 123,
+            'occurrence_index' => 1,
             'status' => 'confirmed',
             'financial_status' => 'paid',
             'final_total_minor' => 1,
             'currency' => 'USD',
         ])->assertUnprocessable()
-            ->assertJsonValidationErrors(['customer_id', 'status', 'financial_status', 'final_total_minor', 'currency']);
+            ->assertJsonValidationErrors([
+                'customer_id',
+                'booking_series_id',
+                'occurrence_index',
+                'status',
+                'financial_status',
+                'final_total_minor',
+                'currency',
+            ]);
 
         $this->assertDatabaseEmpty('bookings');
     }
