@@ -8,7 +8,9 @@ use App\Enums\BookingStatus;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
 use App\Filament\Resources\Bookings\BookingResource;
 use App\Models\Booking;
+use App\Models\BookingEquipment;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -28,6 +30,7 @@ class ViewBooking extends ViewRecord
                 ->modalHeading('Approve booking request')
                 ->modalDescription('Approval reserves the requested resource and equipment while the booking awaits payment. It does not confirm the booking.')
                 ->visible(fn (): bool => $this->canDecide('approve'))
+                ->disabled(fn (): bool => ! $this->hasActiveProvisionalProtection())
                 ->action(fn (): mixed => $this->approveBooking()),
             Action::make('reject')
                 ->label('Reject')
@@ -80,6 +83,22 @@ class ViewBooking extends ViewRecord
     {
         return $this->booking()->status === BookingStatus::Requested
             && $this->actor()->can($ability, $this->booking());
+    }
+
+    private function hasActiveProvisionalProtection(): bool
+    {
+        $booking = $this->booking();
+        $evaluatedAt = CarbonImmutable::now(config('app.timezone'));
+
+        if (! $booking->allocationOccupancy?->expires_at?->gt($evaluatedAt)) {
+            return false;
+        }
+
+        $allocations = $booking->equipmentAllocations()->get()->keyBy('booking_equipment_id');
+
+        return $booking->equipmentRequests->every(
+            fn (BookingEquipment $request): bool => $allocations->get($request->id)?->expires_at?->gt($evaluatedAt) === true,
+        );
     }
 
     private function booking(): Booking
