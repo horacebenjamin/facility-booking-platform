@@ -22,6 +22,29 @@ Do not optimise for speed of code generation at the expense of correctness.
 
 ---
 
+## Agent Task Template
+
+For bounded implementation work, read:
+
+`.agent/task-template.md`
+
+Use it as the task execution framework for:
+
+- scope control;
+- architecture constraints;
+- security and data integrity;
+- testing expectations;
+- manual acceptance;
+- validation;
+- Git safety;
+- final reporting.
+
+Do not treat `.agent/task-template.md` itself as an implementation task.
+
+Task-specific placeholders must be replaced by the actual milestone/batch instructions before implementation begins.
+
+---
+
 # 1. Read the Project Documentation First
 
 Before making material changes, read the relevant project documentation.
