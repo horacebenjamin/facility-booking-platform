@@ -96,4 +96,19 @@ class AvailabilityPageTest extends TestCase
         $this->assertNotSame($activeResource->id, $inactiveCentreResource->id);
         $this->assertNotSame($inactiveEquipment->id, $centreEquipment->id);
     }
+
+    public function test_pricing_change_message_is_shared_when_review_returns_to_availability(): void
+    {
+        $this->withoutVite()
+            ->withSession([
+                'bookingReviewError' => 'Pricing changed before review. Please check availability again.',
+            ])
+            ->get(route('availability.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where(
+                    'reviewError',
+                    'Pricing changed before review. Please check availability again.',
+                ),
+            );
+    }
 }

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { dashboard } from '@/routes';
+import { index as availabilityIndex } from '@/routes/availability';
 
 defineOptions({
     layout: {
@@ -20,14 +22,21 @@ defineOptions({
 
     <div class="w-full flex-1 p-4 md:p-6">
         <Card class="mx-auto w-full max-w-3xl">
-            <CardContent class="flex flex-col gap-2 py-4 sm:py-8">
+            <CardContent class="flex flex-col gap-4 py-4 sm:py-8">
                 <h1 class="text-2xl font-semibold tracking-tight">
                     Welcome to Facility4Hire
                 </h1>
                 <p class="max-w-2xl text-sm leading-6 text-muted-foreground">
-                    Your account is ready. Facility booking and account features
-                    will appear here as they become available.
+                    Find an available facility and submit a booking request for
+                    management approval.
                 </p>
+                <div>
+                    <Button as-child>
+                        <Link :href="availabilityIndex()">
+                            Find a Facility
+                        </Link>
+                    </Button>
+                </div>
             </CardContent>
         </Card>
     </div>

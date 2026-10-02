@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import AvailabilityResult from '@/components/AvailabilityResult.vue';
 import InputError from '@/components/InputError.vue';
@@ -15,7 +15,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    bookingReviewQuery,
+    bookingSelectionFromSearch,
+    bookingSelectionKey,
+    canContinueToBooking,
+} from '@/lib/booking';
 import { check as checkAvailability } from '@/routes/availability';
+import { review as reviewBooking } from '@/routes/bookings';
 import { quote as quotePricing } from '@/routes/pricing';
 import type {
     AvailabilityReason,
@@ -26,23 +33,78 @@ import type {
     PricingResponse,
     Resource,
 } from '@/types/availability';
+import type { BookingSelectionPayload } from '@/types/booking';
 
 const props = defineProps<{
     centres: Centre[];
     facilities: Facility[];
     resources: Resource[];
     equipment: Equipment[];
+    reviewError?: string;
+    initialSelectionQuery?: string;
 }>();
 
-const selectedCentreId = ref<number | null>(null);
-const selectedFacilityId = ref<number | null>(null);
-const selectedResourceId = ref<number | null>(null);
-const selectedDate = ref('');
-const startsAt = ref('');
-const endsAt = ref('');
-const selectedEquipment = ref<Record<number, number>>({});
+const restoredSelection = (() => {
+    const selection = bookingSelectionFromSearch(
+        props.initialSelectionQuery ? '?' + props.initialSelectionQuery : '',
+    );
+    const resource = props.resources.find(
+        (item) => item.id === selection?.resource_id,
+    );
+    const facility = props.facilities.find(
+        (item) => item.id === resource?.facility_id,
+    );
+    const centre = props.centres.find(
+        (item) => item.id === facility?.centre_id,
+    );
+
+    if (!selection || !resource || !facility || !centre) {
+        return null;
+    }
+
+    return {
+        selection,
+        resource,
+        facility,
+        centre,
+        equipment: Object.fromEntries(
+            selection.equipment
+                .filter((requestedItem) =>
+                    props.equipment.some(
+                        (availableItem) =>
+                            availableItem.id === requestedItem.equipment_id &&
+                            availableItem.centre_id === centre.id &&
+                            (availableItem.facility_id === null ||
+                                availableItem.facility_id === facility.id),
+                    ),
+                )
+                .map((item) => [item.equipment_id, item.quantity]),
+        ),
+    };
+})();
+
+const selectedCentreId = ref<number | null>(
+    restoredSelection?.centre.id ?? null,
+);
+const selectedFacilityId = ref<number | null>(
+    restoredSelection?.facility.id ?? null,
+);
+const selectedResourceId = ref<number | null>(
+    restoredSelection?.resource.id ?? null,
+);
+const selectedDate = ref(
+    restoredSelection?.selection.starts_at.slice(0, 10) ?? '',
+);
+const startsAt = ref(
+    restoredSelection?.selection.starts_at.slice(11, 16) ?? '',
+);
+const endsAt = ref(restoredSelection?.selection.ends_at.slice(11, 16) ?? '');
+const selectedEquipment = ref<Record<number, number>>(
+    restoredSelection?.equipment ?? {},
+);
 const result = ref<AvailabilityResponse | null>(null);
 const quote = ref<PricingResponse | null>(null);
+const quoteSelectionKey = ref<string | null>(null);
 const fieldErrors = ref<Record<string, string>>({});
 const requestError = ref('');
 const quoteError = ref('');
@@ -92,6 +154,51 @@ const selectedFacility = computed(() =>
     ),
 );
 
+const bookingSelection = computed<BookingSelectionPayload | null>(() => {
+    if (
+        selectedResourceId.value === null ||
+        !selectedDate.value ||
+        !startsAt.value ||
+        !endsAt.value
+    ) {
+        return null;
+    }
+
+    return {
+        resource_id: selectedResourceId.value,
+        starts_at: dateTime(selectedDate.value, startsAt.value),
+        ends_at: dateTime(selectedDate.value, endsAt.value),
+        equipment: selectedEquipmentItems.value,
+    };
+});
+
+const currentSelectionKey = computed(() =>
+    bookingSelection.value ? bookingSelectionKey(bookingSelection.value) : null,
+);
+
+const canContinue = computed(() =>
+    canContinueToBooking({
+        available: result.value?.data.available ?? false,
+        hasQuote: quote.value !== null,
+        quoteMatchesSelection:
+            quoteSelectionKey.value !== null &&
+            quoteSelectionKey.value === currentSelectionKey.value,
+        isChecking: isChecking.value,
+        isQuoting: isQuoting.value,
+        quoteError: quoteError.value,
+    }),
+);
+
+const reviewHref = computed(() => {
+    if (bookingSelection.value === null) {
+        return reviewBooking();
+    }
+
+    return reviewBooking({
+        query: bookingReviewQuery(bookingSelection.value),
+    });
+});
+
 const duration = computed(() => {
     if (!selectedDate.value || !startsAt.value || !endsAt.value) {
         return null;
@@ -122,6 +229,7 @@ function clearAvailabilityState(): void {
     requestVersion.value += 1;
     result.value = null;
     quote.value = null;
+    quoteSelectionKey.value = null;
     requestError.value = '';
     quoteError.value = '';
     isChecking.value = false;
@@ -197,20 +305,6 @@ const resultReasons = computed(() => {
 
 function dateTime(date: string, time: string): string {
     return `${date} ${time.length === 5 ? `${time}:00` : time}`;
-}
-
-function selectionPayload(): {
-    resource_id: number | null;
-    starts_at: string;
-    ends_at: string;
-    equipment: { equipment_id: number; quantity: number }[];
-} {
-    return {
-        resource_id: selectedResourceId.value,
-        starts_at: dateTime(selectedDate.value, startsAt.value),
-        ends_at: dateTime(selectedDate.value, endsAt.value),
-        equipment: selectedEquipmentItems.value,
-    };
 }
 
 function csrfToken(): string | undefined {
@@ -348,7 +442,7 @@ function formatDuration(durationSeconds: number): string {
 
 async function requestQuote(
     version: number,
-    selection: ReturnType<typeof selectionPayload>,
+    selection: BookingSelectionPayload,
 ): Promise<void> {
     isQuoting.value = true;
     const pricingRoute = quotePricing();
@@ -378,6 +472,7 @@ async function requestQuote(
         }
 
         quote.value = payload;
+        quoteSelectionKey.value = bookingSelectionKey(selection);
     } catch {
         if (version !== requestVersion.value) {
             return;
@@ -401,7 +496,11 @@ async function submit(): Promise<void> {
 
     isChecking.value = true;
     const version = requestVersion.value;
-    const selection = selectionPayload();
+    const selection = bookingSelection.value;
+
+    if (selection === null) {
+        return;
+    }
 
     try {
         const response = await fetch(checkAvailability.url(), {
@@ -970,6 +1069,11 @@ watch(
                             Availability and pricing will be rechecked when you
                             submit a booking request.
                         </p>
+                        <Button v-if="canContinue" class="w-full" as-child>
+                            <Link :href="reviewHref" preserve-state>
+                                Continue to booking
+                            </Link>
+                        </Button>
                     </CardContent>
                 </Card>
                 <Alert
@@ -978,6 +1082,10 @@ watch(
                 >
                     <AlertTitle>Pricing is unavailable</AlertTitle>
                     <AlertDescription>{{ quoteError }}</AlertDescription>
+                </Alert>
+                <Alert v-else-if="reviewError" variant="destructive">
+                    <AlertTitle>Review needs an updated price</AlertTitle>
+                    <AlertDescription>{{ reviewError }}</AlertDescription>
                 </Alert>
                 <Alert v-else-if="requestError" variant="destructive">
                     <AlertTitle>We need a little more information.</AlertTitle>

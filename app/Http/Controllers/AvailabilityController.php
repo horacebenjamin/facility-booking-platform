@@ -7,6 +7,8 @@ use App\Models\Equipment;
 use App\Models\Facility;
 use App\Models\Resource;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,9 +17,16 @@ class AvailabilityController extends Controller
     /**
      * Display the public availability selection page.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         return Inertia::render('availability/Index', [
+            'reviewError' => $request->session()->get('bookingReviewError'),
+            'initialSelectionQuery' => Arr::query($request->only([
+                'resource_id',
+                'starts_at',
+                'ends_at',
+                'equipment',
+            ])),
             'centres' => Centre::query()
                 ->where('is_active', true)
                 ->orderBy('name')
