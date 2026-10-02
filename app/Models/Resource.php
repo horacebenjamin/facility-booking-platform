@@ -68,6 +68,14 @@ class Resource extends Model
         return $this->hasMany(ResourceRate::class);
     }
 
+    /**
+     * @return HasMany<Booking, $this>
+     */
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
     public function syncAllocationUnits(AllocationUnit ...$allocationUnits): void
     {
         foreach ($allocationUnits as $allocationUnit) {

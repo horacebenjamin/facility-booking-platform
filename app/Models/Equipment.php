@@ -57,6 +57,14 @@ class Equipment extends Model
     }
 
     /**
+     * @return HasMany<BookingEquipment, $this>
+     */
+    public function bookingRequests(): HasMany
+    {
+        return $this->hasMany(BookingEquipment::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
