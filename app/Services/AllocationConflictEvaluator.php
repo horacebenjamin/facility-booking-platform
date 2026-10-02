@@ -14,6 +14,7 @@ class AllocationConflictEvaluator
         CarbonInterface $startsAt,
         CarbonInterface $endsAt,
         ?CarbonInterface $evaluatedAt = null,
+        ?int $excludedBookingId = null,
     ): bool {
         $requestedPeriod = $this->normaliseRequestedPeriod($startsAt, $endsAt);
 
@@ -25,7 +26,7 @@ class AllocationConflictEvaluator
             ->setTimezone(config('app.timezone'));
 
         return $resource->allocationUnits()
-            ->whereHas('occupancies', function (Builder $query) use ($requestedPeriod, $evaluatedAt): void {
+            ->whereHas('occupancies', function (Builder $query) use ($requestedPeriod, $evaluatedAt, $excludedBookingId): void {
                 $query
                     ->where('starts_at', '<', $requestedPeriod['endsAt'])
                     ->where('ends_at', '>', $requestedPeriod['startsAt'])
@@ -34,6 +35,14 @@ class AllocationConflictEvaluator
                             ->whereNull('expires_at')
                             ->orWhere('expires_at', '>', $evaluatedAt);
                     });
+
+                if ($excludedBookingId !== null) {
+                    $query->where(function (Builder $query) use ($excludedBookingId): void {
+                        $query
+                            ->whereNull('booking_id')
+                            ->orWhere('booking_id', '!=', $excludedBookingId);
+                    });
+                }
             })
             ->exists();
     }

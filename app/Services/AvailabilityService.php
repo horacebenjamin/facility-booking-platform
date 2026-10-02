@@ -27,6 +27,7 @@ class AvailabilityService
         CarbonInterface $endsAt,
         array $equipmentRequirements = [],
         ?CarbonInterface $evaluatedAt = null,
+        ?int $excludedBookingId = null,
     ): AvailabilityResult {
         $startsAt = CarbonImmutable::instance($startsAt)->setTimezone(config('app.timezone'));
         $endsAt = CarbonImmutable::instance($endsAt)->setTimezone(config('app.timezone'));
@@ -63,6 +64,7 @@ class AvailabilityService
             $operationalPeriod->startsAt,
             $operationalPeriod->endsAt,
             $evaluatedAt,
+            $excludedBookingId,
         )) {
             $reasons[] = AvailabilityReason::ResourceConflict;
         }
@@ -75,6 +77,7 @@ class AvailabilityService
                     $startsAt,
                     $endsAt,
                     $evaluatedAt,
+                    $excludedBookingId,
                 )) {
                 $reasons[] = AvailabilityReason::EquipmentUnavailable;
             }

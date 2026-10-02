@@ -16,6 +16,7 @@ class EquipmentAvailabilityEvaluator
         CarbonInterface $startsAt,
         CarbonInterface $endsAt,
         ?CarbonInterface $evaluatedAt = null,
+        ?int $excludedBookingId = null,
     ): bool {
         $requestedPeriod = $this->normaliseRequestedPeriod($startsAt, $endsAt);
 
@@ -34,7 +35,17 @@ class EquipmentAvailabilityEvaluator
                 $query
                     ->whereNull('expires_at')
                     ->orWhere('expires_at', '>', $evaluatedAt);
-            })
+            });
+
+        if ($excludedBookingId !== null) {
+            $allocatedQuantity->where(function (Builder $query) use ($excludedBookingId): void {
+                $query
+                    ->whereNull('booking_id')
+                    ->orWhere('booking_id', '!=', $excludedBookingId);
+            });
+        }
+
+        $allocatedQuantity = $allocatedQuantity
             ->sum('quantity');
 
         return $allocatedQuantity + $requestedQuantity <= $equipment->quantity;
