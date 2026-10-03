@@ -7,6 +7,16 @@ use App\Models\User;
 
 class BookingPolicy
 {
+    public function viewPayment(User $user, Booking $booking): bool
+    {
+        return $user->can('bookings.view') && $user->id === $booking->customer_id;
+    }
+
+    public function pay(User $user, Booking $booking): bool
+    {
+        return $user->can('payments.initiate') && $user->id === $booking->customer_id;
+    }
+
     public function viewAny(User $user): bool
     {
         return $user->can('bookings.view') && $user->assignedCentres()->exists();

@@ -16,6 +16,7 @@ class SystemRoleSeeder extends Seeder
      */
     private const RolePermissions = [
         'customer' => [
+            'payments.initiate',
             'bookings.view',
             'bookings.create',
             'bookings.amend',

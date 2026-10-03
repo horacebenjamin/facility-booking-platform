@@ -126,6 +126,7 @@ class ApproveBooking
             $booking->update([
                 'status' => BookingStatus::Approved,
                 'financial_status' => FinancialStatus::AwaitingPayment,
+                'payment_due_at' => $evaluatedAt->addHours(max(1, (int) config('booking.payment_deadline_hours'))),
             ]);
 
             activity('booking')
@@ -135,6 +136,7 @@ class ApproveBooking
                 ->withProperties([
                     'status' => BookingStatus::Approved->value,
                     'financial_status' => FinancialStatus::AwaitingPayment->value,
+                    'payment_due_at' => $booking->payment_due_at?->toIso8601String(),
                 ])
                 ->log('Booking approved');
 

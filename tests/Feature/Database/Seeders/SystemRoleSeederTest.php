@@ -18,6 +18,7 @@ class SystemRoleSeederTest extends TestCase
      */
     private const ExpectedRolePermissions = [
         'customer' => [
+            'payments.initiate',
             'bookings.view',
             'bookings.create',
             'bookings.amend',
@@ -54,7 +55,7 @@ class SystemRoleSeederTest extends TestCase
         $this->seed(SystemRoleSeeder::class);
 
         $this->assertDatabaseCount('roles', 3);
-        $this->assertDatabaseCount('permissions', 16);
+        $this->assertDatabaseCount('permissions', 17);
 
         $this->assertDatabaseHas('roles', ['name' => 'customer', 'guard_name' => 'web']);
         $this->assertDatabaseHas('roles', ['name' => 'manager', 'guard_name' => 'web']);
@@ -72,6 +73,7 @@ class SystemRoleSeederTest extends TestCase
             'incidents.manage',
             'invoices.manage',
             'invoices.view',
+            'payments.initiate',
             'payments.record',
             'payments.refund',
             'payments.view',
@@ -108,6 +110,7 @@ class SystemRoleSeederTest extends TestCase
         $customer->assignRole('customer');
 
         $this->assertTrue($customer->can('bookings.create'));
+        $this->assertTrue($customer->can('payments.initiate'));
         $this->assertFalse($customer->can('bookings.approve'));
         $this->assertFalse($customer->can('attendance.manage'));
         $this->assertFalse($customer->can('payments.record'));
@@ -144,10 +147,10 @@ class SystemRoleSeederTest extends TestCase
         $this->seed(SystemRoleSeeder::class);
 
         $this->assertDatabaseCount('roles', 3);
-        $this->assertDatabaseCount('permissions', 16);
-        $this->assertSame(4, Role::findByName('customer')->permissions()->count());
+        $this->assertDatabaseCount('permissions', 17);
+        $this->assertSame(5, Role::findByName('customer')->permissions()->count());
         $this->assertSame(16, Role::findByName('manager')->permissions()->count());
         $this->assertSame(4, Role::findByName('leisure-assistant')->permissions()->count());
-        $this->assertSame(16, Permission::query()->count());
+        $this->assertSame(17, Permission::query()->count());
     }
 }

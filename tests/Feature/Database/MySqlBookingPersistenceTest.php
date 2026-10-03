@@ -99,7 +99,7 @@ class MySqlBookingPersistenceTest extends TestCase
     {
         $this->expectException(\ValueError::class);
 
-        Booking::factory()->create(['status' => 'confirmed']);
+        Booking::factory()->create(['status' => 'invalid']);
     }
 
     public function test_mysql_rejects_an_invalid_raw_booking_status(): void
@@ -116,7 +116,7 @@ class MySqlBookingPersistenceTest extends TestCase
             'resource_id' => $booking->resource_id,
             'starts_at' => '2026-10-12 09:00:00',
             'ends_at' => '2026-10-12 11:00:00',
-            'status' => 'confirmed',
+            'status' => 'invalid',
             'financial_status' => FinancialStatus::NotDue->value,
         ]);
     }
@@ -125,7 +125,7 @@ class MySqlBookingPersistenceTest extends TestCase
     {
         $this->expectException(\ValueError::class);
 
-        Booking::factory()->create(['financial_status' => 'paid']);
+        Booking::factory()->create(['financial_status' => 'invalid']);
     }
 
     public function test_mysql_rejects_an_invalid_raw_financial_status(): void
@@ -143,7 +143,7 @@ class MySqlBookingPersistenceTest extends TestCase
             'starts_at' => '2026-10-12 09:00:00',
             'ends_at' => '2026-10-12 11:00:00',
             'status' => BookingStatus::Requested->value,
-            'financial_status' => 'paid',
+            'financial_status' => 'invalid',
         ]);
     }
 

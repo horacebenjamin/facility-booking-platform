@@ -28,8 +28,9 @@ use Spatie\Activitylog\Models\Activity;
  * @property CarbonInterface $ends_at
  * @property BookingStatus $status
  * @property FinancialStatus $financial_status
+ * @property CarbonInterface|null $payment_due_at
  */
-#[Fillable(['booking_series_id', 'occurrence_index', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status'])]
+#[Fillable(['booking_series_id', 'occurrence_index', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status', 'payment_due_at'])]
 class Booking extends Model
 {
     /** @use HasFactory<BookingFactory> */
@@ -91,6 +92,12 @@ class Booking extends Model
         return $this->hasOne(BookingPriceSnapshot::class);
     }
 
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     /**
      * @return HasOne<AllocationOccupancy, $this>
      */
@@ -126,6 +133,7 @@ class Booking extends Model
             'occurrence_index' => 'integer',
             'status' => BookingStatus::class,
             'financial_status' => FinancialStatus::class,
+            'payment_due_at' => 'datetime',
         ];
     }
 }

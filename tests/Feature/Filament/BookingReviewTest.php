@@ -146,6 +146,7 @@ class BookingReviewTest extends TestCase
 
         $this->assertSame(BookingStatus::Approved, $approved->status);
         $this->assertSame(FinancialStatus::AwaitingPayment, $approved->financial_status);
+        $this->assertSame('2026-10-02 12:00:00', $approved->payment_due_at?->toDateTimeString());
         $this->assertNotSame('confirmed', $approved->status->value);
         $this->assertNull($approved->allocationOccupancy()->sole()->expires_at);
         $this->assertNull($approved->equipmentAllocations()->sole()->expires_at);
@@ -541,7 +542,9 @@ class BookingReviewTest extends TestCase
         $this->assertTrue($activity->causer->is($manager));
         $this->assertSame('2026-10-01 12:00:00', $activity->created_at->toDateTimeString());
         $this->assertSame($decision === 'reject' ? ['reason' => 'Operational closure.'] : [
-            'status' => 'approved', 'financial_status' => 'awaiting_payment',
+            'status' => 'approved',
+            'payment_due_at' => '2026-10-02T12:00:00+00:00',
+            'financial_status' => 'awaiting_payment',
         ], $activity->properties->all());
         $this->assertModelExists($booking);
         $this->assertFalse(BookingResource::getEloquentQuery()->whereKey($booking)->exists());

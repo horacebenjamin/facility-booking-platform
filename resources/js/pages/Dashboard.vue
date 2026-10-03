@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import { index as availabilityIndex } from '@/routes/availability';
+import { index as bookingIndex } from '@/routes/bookings';
 
 defineOptions({
     layout: {
@@ -30,11 +31,14 @@ defineOptions({
                     Find an available facility and submit a booking request for
                     management approval.
                 </p>
-                <div>
+                <div class="flex flex-wrap gap-3">
                     <Button as-child>
                         <Link :href="availabilityIndex()">
                             Find a Facility
                         </Link>
+                    </Button>
+                    <Button as-child variant="outline">
+                        <Link :href="bookingIndex()">My bookings</Link>
                     </Button>
                 </div>
             </CardContent>
