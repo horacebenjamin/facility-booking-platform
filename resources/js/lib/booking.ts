@@ -2,8 +2,17 @@ import type {
     BookingReviewSelection,
     BookingSelectionPayload,
     BookingSubmissionResponse,
+    RecurringBookingPreviewData,
+    RecurringBookingPreviewResponse,
+    RecurringBookingSelectionPayload,
+    RecurringBookingSubmissionPayload,
+    RecurringBookingSubmissionResponse,
 } from '@/types/booking';
 import { store as storeBooking } from '@/routes/bookings';
+import {
+    preview as previewRecurringBooking,
+    store as storeRecurringBooking,
+} from '@/routes/bookings/recurring';
 import type { QueryParams } from '@/wayfinder';
 
 interface BookingContinuationContext {
@@ -202,4 +211,170 @@ export function bookingSubmissionError(status: number): string {
     }
 
     return 'We could not submit your booking request right now. Please try again.';
+}
+
+export function recurringBookingSelectionPayload(
+    selection: BookingReviewSelection,
+    intervalWeeks: number,
+    occurrenceCount: number,
+    timezone: string,
+): RecurringBookingSelectionPayload {
+    return {
+        ...bookingSubmissionPayload(selection),
+        interval_weeks: intervalWeeks,
+        occurrence_count: occurrenceCount,
+        timezone,
+    };
+}
+
+export function recurringBookingSubmissionPayload(
+    selection: RecurringBookingSelectionPayload,
+    submissionMode: RecurringBookingSubmissionPayload['submission_mode'],
+    selectedOccurrenceIndexes: number[] = [],
+): RecurringBookingSubmissionPayload {
+    if (submissionMode === 'all_occurrences') {
+        return {
+            ...selection,
+            submission_mode: submissionMode,
+        };
+    }
+
+    return {
+        ...selection,
+        submission_mode: submissionMode,
+        selected_occurrence_indexes: selectedOccurrenceIndexes,
+    };
+}
+
+export function canSubmitRecurringBooking(
+    preview: RecurringBookingPreviewData | null,
+    acceptedAvailableOccurrences: boolean,
+): boolean {
+    if (preview === null || preview.valid_occurrence_indexes.length === 0) {
+        return false;
+    }
+
+    return preview.conflict_count === 0 || acceptedAvailableOccurrences;
+}
+
+export function sendRecurringBookingPreview(
+    selection: RecurringBookingSelectionPayload,
+    csrfToken: string | undefined,
+    request: BookingRequestClient = fetch,
+): Promise<Response> {
+    const route = previewRecurringBooking();
+
+    return sendJson(route.url, route.method, selection, csrfToken, request);
+}
+
+export function sendRecurringBookingRequest(
+    selection: RecurringBookingSubmissionPayload,
+    csrfToken: string | undefined,
+    request: BookingRequestClient = fetch,
+): Promise<Response> {
+    const route = storeRecurringBooking();
+
+    return sendJson(route.url, route.method, selection, csrfToken, request);
+}
+
+export function isRecurringBookingPreviewResponse(
+    payload: unknown,
+): payload is RecurringBookingPreviewResponse {
+    if (
+        typeof payload !== 'object' ||
+        payload === null ||
+        !('data' in payload) ||
+        typeof payload.data !== 'object' ||
+        payload.data === null
+    ) {
+        return false;
+    }
+
+    const data = payload.data;
+
+    return (
+        'pattern' in data &&
+        'summary' in data &&
+        'occurrences' in data &&
+        'valid_occurrence_indexes' in data &&
+        'conflict_count' in data &&
+        Array.isArray(data.occurrences) &&
+        data.occurrences.every(
+            (occurrence) =>
+                typeof occurrence === 'object' &&
+                occurrence !== null &&
+                'index' in occurrence &&
+                'status' in occurrence &&
+                'starts_at' in occurrence &&
+                'ends_at' in occurrence &&
+                'conflict_messages' in occurrence &&
+                typeof occurrence.index === 'number' &&
+                (occurrence.status === 'available' ||
+                    occurrence.status === 'conflict') &&
+                typeof occurrence.starts_at === 'string' &&
+                typeof occurrence.ends_at === 'string' &&
+                Array.isArray(occurrence.conflict_messages),
+        ) &&
+        Array.isArray(data.valid_occurrence_indexes) &&
+        typeof data.conflict_count === 'number'
+    );
+}
+
+export function isRecurringBookingSubmissionResponse(
+    payload: unknown,
+): payload is RecurringBookingSubmissionResponse {
+    if (
+        typeof payload !== 'object' ||
+        payload === null ||
+        !('data' in payload) ||
+        typeof payload.data !== 'object' ||
+        payload.data === null
+    ) {
+        return false;
+    }
+
+    return (
+        'identifier' in payload.data &&
+        'status' in payload.data &&
+        'status_label' in payload.data &&
+        'occurrence_count' in payload.data &&
+        'occurrences' in payload.data &&
+        typeof payload.data.identifier === 'string' &&
+        payload.data.status === 'requested' &&
+        payload.data.status_label ===
+            'Requested / Awaiting Management Approval' &&
+        typeof payload.data.occurrence_count === 'number' &&
+        Array.isArray(payload.data.occurrences)
+    );
+}
+
+export function recurringBookingError(status: number): string {
+    if (status === 409) {
+        return 'Availability changed. Review every occurrence and choose how to continue.';
+    }
+
+    if (status === 422) {
+        return 'Check the recurrence details and try again.';
+    }
+
+    return 'We could not process the recurring request right now. Please try again.';
+}
+
+function sendJson(
+    url: string,
+    method: string,
+    payload: object,
+    csrfToken: string | undefined,
+    request: BookingRequestClient,
+): Promise<Response> {
+    return request(url, {
+        method: method.toUpperCase(),
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            ...(csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {}),
+        },
+        body: JSON.stringify(payload),
+    });
 }

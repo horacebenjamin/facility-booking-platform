@@ -30,14 +30,39 @@ class BookingRequestEngine
     /**
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
      */
+    public function context(int $resourceId, array $equipmentSelections): BookingRequestContext
+    {
+        return $this->resolveContext($resourceId, $equipmentSelections, false);
+    }
+
+    /**
+     * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
+     */
     public function lockContext(int $resourceId, array $equipmentSelections): BookingRequestContext
     {
-        $resource = Resource::query()->lockForUpdate()->findOrFail($resourceId);
-        $allocationUnits = $resource->allocationUnits()
-            ->orderBy('allocation_units.id')
-            ->lockForUpdate()
-            ->get();
-        $equipmentById = $this->lockedEquipment($equipmentSelections);
+        return $this->resolveContext($resourceId, $equipmentSelections, true);
+    }
+
+    /**
+     * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
+     */
+    private function resolveContext(int $resourceId, array $equipmentSelections, bool $lock): BookingRequestContext
+    {
+        $resourceQuery = Resource::query();
+
+        if ($lock) {
+            $resourceQuery->lockForUpdate();
+        }
+
+        $resource = $resourceQuery->findOrFail($resourceId);
+        $allocationUnitsQuery = $resource->allocationUnits()->orderBy('allocation_units.id');
+
+        if ($lock) {
+            $allocationUnitsQuery->lockForUpdate();
+        }
+
+        $allocationUnits = $allocationUnitsQuery->get();
+        $equipmentById = $this->equipment($equipmentSelections, $lock);
 
         $resource->load('facility.centre');
 
@@ -169,7 +194,7 @@ class BookingRequestEngine
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
      * @return Collection<int, Equipment>
      */
-    private function lockedEquipment(array $equipmentSelections): Collection
+    private function equipment(array $equipmentSelections, bool $lock): Collection
     {
         $equipmentIds = collect($equipmentSelections)->pluck('equipment_id')->sort()->values();
 
@@ -177,12 +202,15 @@ class BookingRequestEngine
             return new Collection;
         }
 
-        $equipment = Equipment::query()
+        $equipmentQuery = Equipment::query()
             ->whereKey($equipmentIds)
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
+            ->orderBy('id');
+
+        if ($lock) {
+            $equipmentQuery->lockForUpdate();
+        }
+
+        $equipment = $equipmentQuery->get()->keyBy('id');
 
         if ($equipment->count() !== $equipmentIds->count()) {
             throw new BookingSubmissionUnavailable;

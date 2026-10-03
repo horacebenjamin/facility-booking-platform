@@ -41,6 +41,12 @@ class BookingResource extends Resource
                 TextColumn::make('centre.name')->label('Centre')->sortable(),
                 TextColumn::make('facility.name')->label('Facility')->sortable(),
                 TextColumn::make('resource.name')->label('Resource')->searchable()->sortable(),
+                TextColumn::make('series.identifier')
+                    ->label('Recurring series')
+                    ->placeholder('One-off')
+                    ->description(fn (Booking $record): ?string => $record->series === null
+                        ? null
+                        : "Occurrence {$record->occurrence_index} of {$record->series->occurrence_count}"),
                 TextColumn::make('starts_at')->label('Requested time')->dateTime('j M Y, H:i')->sortable(),
                 TextColumn::make('ends_at')->label('Ends')->dateTime('H:i'),
                 TextColumn::make('status')
@@ -87,6 +93,29 @@ class BookingResource extends Resource
                 TextEntry::make('starts_at')->label('Starts')->dateTime('j M Y, H:i'),
                 TextEntry::make('ends_at')->label('Ends')->dateTime('j M Y, H:i'),
             ])->columns(2),
+            Section::make('Recurring series')
+                ->visible(fn (Booking $record): bool => $record->series !== null)
+                ->schema([
+                    TextEntry::make('series.identifier')->label('Series identifier')->copyable(),
+                    TextEntry::make('occurrence_index')
+                        ->label('Position in requested series')
+                        ->formatStateUsing(fn (?int $state, Booking $record): string => "Occurrence {$state} of {$record->series?->occurrence_count}"),
+                    TextEntry::make('series.interval_weeks')
+                        ->label('Cadence')
+                        ->formatStateUsing(fn (?int $state): string => $state === 1 ? 'Every week' : "Every {$state} weeks"),
+                    TextEntry::make('series.timezone')->label('Timezone'),
+                    RepeatableEntry::make('series.bookings')
+                        ->label('Series occurrences')
+                        ->schema([
+                            TextEntry::make('occurrence_index')->label('Occurrence'),
+                            TextEntry::make('reference')->label('Booking reference'),
+                            TextEntry::make('starts_at')->label('Starts')->dateTime('j M Y, H:i'),
+                            TextEntry::make('status')->label('State')->badge()->formatStateUsing(fn (BookingStatus $state): string => $state->label()),
+                        ])
+                        ->contained(false)
+                        ->columns(4),
+                ])
+                ->columns(2),
             Section::make('Equipment')->schema([
                 RepeatableEntry::make('equipmentRequests')
                     ->label('Requested equipment')
@@ -136,6 +165,7 @@ class BookingResource extends Resource
                 'centre',
                 'facility',
                 'resource',
+                'series.bookings',
                 'allocationOccupancy',
                 'equipmentRequests.equipment',
                 'priceSnapshot.lines',

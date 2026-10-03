@@ -145,6 +145,53 @@ class MySqlRecurringBookingSubmissionTest extends TestCase
             ->all());
     }
 
+    public function test_an_explicit_valid_subset_is_persisted_atomically_with_original_occurrence_identity(): void
+    {
+        $fixture = $this->bookableFixture();
+        AvailabilityBlock::factory()->forResource($fixture['resource'])->create([
+            'starts_at' => '2026-10-12 17:00:00',
+            'ends_at' => '2026-10-12 18:30:00',
+        ]);
+
+        $result = $this->createSeries(
+            $this->customer(),
+            $fixture['resource'],
+            3,
+            selectedOccurrenceIndexes: [1, 3],
+        );
+
+        $this->assertTrue($result->wasCreated());
+        $this->assertSame(3, $result->series->occurrence_count);
+        $this->assertSame([1, 3], $result->series->bookings()->pluck('occurrence_index')->all());
+        $this->assertCount(2, $result->bookings);
+        $this->assertDatabaseCount('booking_price_snapshots', 2);
+        $this->assertDatabaseCount('allocation_occupancies', 2);
+    }
+
+    public function test_an_explicit_subset_containing_a_conflict_creates_nothing(): void
+    {
+        $fixture = $this->bookableFixture();
+        AvailabilityBlock::factory()->forResource($fixture['resource'])->create([
+            'starts_at' => '2026-10-12 17:00:00',
+            'ends_at' => '2026-10-12 18:30:00',
+        ]);
+
+        $result = $this->createSeries(
+            $this->customer(),
+            $fixture['resource'],
+            3,
+            selectedOccurrenceIndexes: [1, 2, 3],
+        );
+
+        $this->assertFalse($result->wasCreated());
+        $this->assertSame([2], array_map(
+            static fn ($conflict): int => $conflict->period->index,
+            $result->validation->conflicts,
+        ));
+        $this->assertDatabaseEmpty('booking_series');
+        $this->assertDatabaseEmpty('bookings');
+    }
+
     public function test_pricing_failure_identifies_the_occurrence_and_keeps_the_series_atomic(): void
     {
         $fixture = $this->bookableFixture(withRate: false);
@@ -311,12 +358,14 @@ class MySqlRecurringBookingSubmissionTest extends TestCase
 
     /**
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
+     * @param  list<int>|null  $selectedOccurrenceIndexes
      */
     private function createSeries(
         User $customer,
         Resource $resource,
         int $occurrenceCount,
         array $equipmentSelections = [],
+        ?array $selectedOccurrenceIndexes = null,
     ): CreateBookingSeriesResult {
         return app(CreateRecurringBookingRequest::class)->handle(
             $customer,
@@ -325,6 +374,7 @@ class MySqlRecurringBookingSubmissionTest extends TestCase
             CarbonImmutable::parse('2026-10-05 19:30:00', 'Europe/London'),
             new RecurrencePattern(RecurrenceFrequency::Weekly, 1, $occurrenceCount, 'Europe/London'),
             $equipmentSelections,
+            $selectedOccurrenceIndexes,
         );
     }
 

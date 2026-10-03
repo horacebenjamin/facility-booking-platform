@@ -2,7 +2,10 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import BookingConfirmation from '@/components/BookingConfirmation.vue';
+import BookingFrequencyChoice from '@/components/BookingFrequencyChoice.vue';
 import BookingSummary from '@/components/BookingSummary.vue';
+import RecurringBookingConfirmation from '@/components/RecurringBookingConfirmation.vue';
+import RecurringBookingReview from '@/components/RecurringBookingReview.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,17 +31,24 @@ import type {
     BookingReviewQuote,
     BookingReviewSelection,
     BookingSubmissionResponse,
+    RecurrenceConstraints,
+    RecurringBookingConfirmation as RecurringBookingConfirmationData,
 } from '@/types/booking';
 
 const props = defineProps<{
     selection: BookingReviewSelection;
     quote: BookingReviewQuote;
     customer: BookingCustomer;
+    recurrence: RecurrenceConstraints;
 }>();
 
+const bookingType = ref<'one_off' | 'recurring'>('one_off');
 const isSubmitting = ref(false);
 const submitError = ref('');
 const confirmation = ref<BookingSubmissionResponse['data'] | null>(null);
+const recurringConfirmation = ref<RecurringBookingConfirmationData | null>(
+    null,
+);
 const changeSelectionHref = availabilityIndex({
     query: bookingReviewQuery(bookingSubmissionPayload(props.selection)),
 });
@@ -89,7 +99,11 @@ async function submitBookingRequest(): Promise<void> {
 
 <template>
     <Head
-        :title="confirmation ? 'Booking request received' : 'Review booking'"
+        :title="
+            confirmation || recurringConfirmation
+                ? 'Booking request received'
+                : 'Review booking'
+        "
     />
 
     <main class="min-h-screen bg-muted/30 px-4 py-8 sm:px-6 sm:py-12">
@@ -104,9 +118,13 @@ async function submitBookingRequest(): Promise<void> {
                     </li>
                     <li
                         class="rounded-md px-2 py-2 text-center font-medium"
-                        :aria-current="confirmation ? undefined : 'step'"
+                        :aria-current="
+                            confirmation || recurringConfirmation
+                                ? undefined
+                                : 'step'
+                        "
                         :class="
-                            confirmation
+                            confirmation || recurringConfirmation
                                 ? 'bg-muted'
                                 : 'bg-primary text-primary-foreground'
                         "
@@ -115,9 +133,13 @@ async function submitBookingRequest(): Promise<void> {
                     </li>
                     <li
                         class="rounded-md px-2 py-2 text-center font-medium"
-                        :aria-current="confirmation ? 'step' : undefined"
+                        :aria-current="
+                            confirmation || recurringConfirmation
+                                ? 'step'
+                                : undefined
+                        "
                         :class="
-                            confirmation
+                            confirmation || recurringConfirmation
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted'
                         "
@@ -127,8 +149,13 @@ async function submitBookingRequest(): Promise<void> {
                 </ol>
             </nav>
 
-            <template v-if="confirmation">
+            <template v-if="confirmation || recurringConfirmation">
+                <RecurringBookingConfirmation
+                    v-if="recurringConfirmation"
+                    :confirmation="recurringConfirmation"
+                />
                 <BookingConfirmation
+                    v-else-if="confirmation"
                     :booking="confirmation"
                     :selection="selection"
                     :quote="quote"
@@ -153,21 +180,29 @@ async function submitBookingRequest(): Promise<void> {
                     <h1
                         class="text-3xl font-semibold tracking-tight sm:text-4xl"
                     >
-                        Review your booking
+                        {{
+                            bookingType === 'one_off'
+                                ? 'Review your booking'
+                                : 'Set up recurring bookings'
+                        }}
                     </h1>
                     <p class="text-muted-foreground">
-                        Check the details below before sending your request for
-                        management approval.
+                        Choose whether this is one booking or a weekly series,
+                        then review everything before sending it for management
+                        approval.
                     </p>
                 </header>
+
+                <BookingFrequencyChoice v-model="bookingType" />
 
                 <BookingSummary
                     :selection="selection"
                     :quote="quote"
                     :customer="customer"
+                    :show-price="bookingType === 'one_off'"
                 />
 
-                <Card>
+                <Card v-if="bookingType === 'one_off'">
                     <CardHeader>
                         <CardTitle>Before you submit</CardTitle>
                         <CardDescription>
@@ -223,6 +258,13 @@ async function submitBookingRequest(): Promise<void> {
                         </p>
                     </CardContent>
                 </Card>
+
+                <RecurringBookingReview
+                    v-else
+                    :selection="selection"
+                    :recurrence="recurrence"
+                    @confirmed="recurringConfirmation = $event"
+                />
             </template>
         </div>
     </main>

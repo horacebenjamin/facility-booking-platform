@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\EquipmentRequirement;
 use App\Services\PricingRequest;
 use App\Services\PricingService;
+use App\Services\RecurrencePattern;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -81,6 +82,13 @@ class BookingReviewController extends Controller
             'customer' => [
                 'name' => $customer->name,
                 'email' => $customer->email,
+            ],
+            'recurrence' => [
+                'timezone' => config('booking.recurrence_timezone'),
+                'minimum_interval_weeks' => 1,
+                'maximum_interval_weeks' => RecurrencePattern::MaximumIntervalWeeks,
+                'minimum_occurrences' => 2,
+                'maximum_occurrences' => RecurrencePattern::MaximumOccurrences,
             ],
         ]);
     }

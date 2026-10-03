@@ -66,7 +66,12 @@ class BookingReviewPageTest extends TestCase
                 ->where('quote.currency', 'GBP')
                 ->where('quote.total_minor', 9000)
                 ->where('customer.name', $customer->name)
-                ->where('customer.email', $customer->email),
+                ->where('customer.email', $customer->email)
+                ->where('recurrence.timezone', 'Europe/London')
+                ->where('recurrence.minimum_interval_weeks', 1)
+                ->where('recurrence.maximum_interval_weeks', 255)
+                ->where('recurrence.minimum_occurrences', 2)
+                ->where('recurrence.maximum_occurrences', 104),
             );
     }
 

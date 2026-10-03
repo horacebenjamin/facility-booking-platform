@@ -16,6 +16,7 @@ use App\Models\AllocationUnit;
 use App\Models\Booking;
 use App\Models\BookingEquipment;
 use App\Models\BookingPriceSnapshot;
+use App\Models\BookingSeries;
 use App\Models\Centre;
 use App\Models\Equipment;
 use App\Models\EquipmentAllocation;
@@ -278,6 +279,39 @@ class BookingReviewTest extends TestCase
             ->assertFormFieldDoesNotExist('status');
 
         $this->assertArrayNotHasKey('edit', BookingResource::getPages());
+    }
+
+    public function test_management_review_identifies_a_recurring_occurrence_and_its_siblings(): void
+    {
+        [$first, $second, $third] = $this->protectedRecurringBookings();
+        $manager = $this->assignedManager($first->centre);
+        $this->actingAs($manager);
+
+        Livewire::test(ViewBooking::class, ['record' => $first->getRouteKey()])
+            ->assertSee($first->series->identifier)
+            ->assertSee('Occurrence 1 of 3')
+            ->assertSee('Every week')
+            ->assertSee($first->reference)
+            ->assertSee($second->reference)
+            ->assertSee($third->reference);
+    }
+
+    public function test_management_decisions_on_recurring_occurrences_do_not_change_siblings(): void
+    {
+        [$first, $second, $third] = $this->protectedRecurringBookings();
+        $manager = $this->assignedManager($first->centre);
+
+        app(ApproveBooking::class)->handle($manager, $first);
+
+        $this->assertSame(BookingStatus::Approved, $first->fresh()->status);
+        $this->assertSame(BookingStatus::Requested, $second->fresh()->status);
+        $this->assertSame(BookingStatus::Requested, $third->fresh()->status);
+
+        app(RejectBooking::class)->handle($manager, $second, 'Operational closure.');
+
+        $this->assertSame(BookingStatus::Approved, $first->fresh()->status);
+        $this->assertSame(BookingStatus::Rejected, $second->fresh()->status);
+        $this->assertSame(BookingStatus::Requested, $third->fresh()->status);
     }
 
     #[DataProvider('unauthorisedDecisions')]
@@ -651,6 +685,54 @@ class BookingReviewTest extends TestCase
         }
 
         return $booking;
+    }
+
+    /**
+     * @return array{Booking, Booking, Booking}
+     */
+    private function protectedRecurringBookings(): array
+    {
+        $first = $this->protectedBooking();
+        $series = BookingSeries::factory()->create([
+            'customer_id' => $first->customer_id,
+            'centre_id' => $first->centre_id,
+            'facility_id' => $first->facility_id,
+            'resource_id' => $first->resource_id,
+            'interval_weeks' => 1,
+            'occurrence_count' => 3,
+            'timezone' => 'Europe/London',
+            'first_starts_at' => $first->starts_at,
+            'first_ends_at' => $first->ends_at,
+        ]);
+        $first->update([
+            'booking_series_id' => $series->id,
+            'occurrence_index' => 1,
+        ]);
+        $first = $first->fresh() ?? $first;
+        $bookings = [$first];
+
+        foreach ([2 => '2026-10-12', 3 => '2026-10-19'] as $index => $date) {
+            $booking = Booking::factory()->for($first->resource)->create([
+                'booking_series_id' => $series->id,
+                'occurrence_index' => $index,
+                'customer_id' => $series->customer_id,
+                'centre_id' => $series->centre_id,
+                'facility_id' => $series->facility_id,
+                'resource_id' => $series->resource_id,
+                'starts_at' => "{$date} 18:00:00",
+                'ends_at' => "{$date} 19:00:00",
+            ]);
+            $occupancy = AllocationOccupancy::factory()->for($booking)->create([
+                'starts_at' => "{$date} 17:45:00",
+                'ends_at' => "{$date} 19:15:00",
+                'expires_at' => '2026-10-03 12:00:00',
+            ]);
+            $occupancy->allocationUnits()->attach($first->resource->allocationUnits()->pluck('allocation_units.id'));
+            $bookings[] = $booking;
+        }
+
+        /** @var array{Booking, Booking, Booking} $bookings */
+        return $bookings;
     }
 
     private function manager(): User

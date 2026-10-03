@@ -13,6 +13,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class CreateRecurringBookingRequest
 {
@@ -24,6 +25,7 @@ class CreateRecurringBookingRequest
 
     /**
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
+     * @param  list<int>|null  $selectedOccurrenceIndexes
      */
     public function handle(
         User $customer,
@@ -32,17 +34,32 @@ class CreateRecurringBookingRequest
         CarbonImmutable $firstEndsAt,
         RecurrencePattern $pattern,
         array $equipmentSelections = [],
+        ?array $selectedOccurrenceIndexes = null,
     ): CreateBookingSeriesResult {
         $this->authorize($customer);
         $periods = $this->recurrenceGenerator->generate($firstStartsAt, $firstEndsAt, $pattern);
+        $this->validateSelectedOccurrenceIndexes($selectedOccurrenceIndexes, $pattern->occurrenceCount);
 
-        return DB::transaction(function () use ($customer, $resourceId, $pattern, $equipmentSelections, $periods): CreateBookingSeriesResult {
+        return DB::transaction(function () use ($customer, $resourceId, $pattern, $equipmentSelections, $periods, $selectedOccurrenceIndexes): CreateBookingSeriesResult {
             $context = $this->bookingRequestEngine->lockContext($resourceId, $equipmentSelections);
             $evaluatedAt = CarbonImmutable::now(config('app.timezone'));
             $validation = $this->bookingSeriesValidator->validate($context, $periods, $evaluatedAt);
+            $occurrencesToPersist = $validation->validOccurrences;
 
-            if (! $validation->isValid()) {
-                return new CreateBookingSeriesResult($validation);
+            if ($selectedOccurrenceIndexes === null) {
+                if (! $validation->isValid()) {
+                    return new CreateBookingSeriesResult($validation);
+                }
+            } else {
+                $selectedIndexLookup = array_fill_keys($selectedOccurrenceIndexes, true);
+                $occurrencesToPersist = array_values(array_filter(
+                    $validation->validOccurrences,
+                    static fn ($occurrence): bool => isset($selectedIndexLookup[$occurrence->period->index]),
+                ));
+
+                if (count($occurrencesToPersist) !== count($selectedOccurrenceIndexes)) {
+                    return new CreateBookingSeriesResult($validation);
+                }
             }
 
             $firstPeriod = $periods[0];
@@ -61,7 +78,7 @@ class CreateRecurringBookingRequest
             ]);
             $bookings = [];
 
-            foreach ($validation->validOccurrences as $occurrence) {
+            foreach ($occurrencesToPersist as $occurrence) {
                 $bookings[] = $this->bookingRequestEngine->persist(
                     customer: $customer,
                     context: $context,
@@ -83,6 +100,27 @@ class CreateRecurringBookingRequest
     {
         if (! $customer->can('bookings.create')) {
             throw new AuthorizationException;
+        }
+    }
+
+    /**
+     * @param  list<int>|null  $selectedOccurrenceIndexes
+     */
+    private function validateSelectedOccurrenceIndexes(?array $selectedOccurrenceIndexes, int $occurrenceCount): void
+    {
+        if ($selectedOccurrenceIndexes === null) {
+            return;
+        }
+
+        if ($selectedOccurrenceIndexes === []
+            || count($selectedOccurrenceIndexes) !== count(array_unique($selectedOccurrenceIndexes))) {
+            throw new InvalidArgumentException('Selected recurring occurrences must be non-empty and unique.');
+        }
+
+        foreach ($selectedOccurrenceIndexes as $index) {
+            if ($index < 1 || $index > $occurrenceCount) {
+                throw new InvalidArgumentException('A selected recurring occurrence is outside the generated series.');
+            }
         }
     }
 }
