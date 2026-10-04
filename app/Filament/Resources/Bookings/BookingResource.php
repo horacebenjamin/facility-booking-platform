@@ -7,6 +7,7 @@ use App\Enums\FinancialStatus;
 use App\Filament\Resources\Bookings\Pages\ListBookings;
 use App\Filament\Resources\Bookings\Pages\ViewBooking;
 use App\Models\Booking;
+use App\Models\CustomerInvoiceTerms;
 use Carbon\CarbonInterface;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -87,6 +88,12 @@ class BookingResource extends Resource
             Section::make('Customer and venue')->schema([
                 TextEntry::make('customer.name')->label('Customer'),
                 TextEntry::make('customer.email')->label('Customer email'),
+                TextEntry::make('invoice_eligibility')->label('Invoice eligibility at this centre')
+                    ->state(function (Booking $record): string {
+                        $terms = CustomerInvoiceTerms::query()->where('customer_id', $record->customer_id)->where('centre_id', $record->centre_id)->first();
+
+                        return $terms?->enabled ? 'Authorised — '.$terms->term_days.' day terms' : 'Card payment required';
+                    }),
                 TextEntry::make('centre.name')->label('Centre'),
                 TextEntry::make('facility.name')->label('Facility'),
                 TextEntry::make('resource.name')->label('Resource'),

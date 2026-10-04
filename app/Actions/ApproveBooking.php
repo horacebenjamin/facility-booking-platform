@@ -2,18 +2,22 @@
 
 namespace App\Actions;
 
+use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
+use App\Exceptions\PaymentUnavailable;
 use App\Models\AllocationOccupancy;
 use App\Models\AllocationUnit;
 use App\Models\Booking;
 use App\Models\BookingEquipment;
+use App\Models\CustomerInvoiceTerms;
 use App\Models\Equipment;
 use App\Models\EquipmentAllocation;
 use App\Models\Resource;
 use App\Models\User;
 use App\Services\AvailabilityService;
+use App\Services\BookingPaymentEligibility;
 use App\Services\EquipmentRequirement;
 use App\Services\OperationalOccupancyCalculator;
 use Carbon\CarbonImmutable;
@@ -27,6 +31,7 @@ class ApproveBooking
     public function __construct(
         private AvailabilityService $availabilityService,
         private OperationalOccupancyCalculator $operationalOccupancyCalculator,
+        private BookingPaymentEligibility $paymentEligibility,
     ) {}
 
     public function handle(User $actor, Booking $booking): Booking
@@ -119,14 +124,27 @@ class ApproveBooking
                 throw new BookingLifecycleTransitionUnavailable('This booking is no longer available for approval.');
             }
 
+            User::query()->lockForUpdate()->findOrFail($booking->customer_id);
+            $terms = CustomerInvoiceTerms::query()->where('customer_id', $booking->customer_id)
+                ->where('centre_id', $booking->centre_id)->where('enabled', true)->lockForUpdate()->first();
+            if ($terms !== null) {
+                try {
+                    $this->paymentEligibility->snapshot($booking);
+                } catch (PaymentUnavailable $exception) {
+                    throw new BookingLifecycleTransitionUnavailable($exception->getMessage(), previous: $exception);
+                }
+            }
+
             $occupancy->update(['expires_at' => null]);
             EquipmentAllocation::query()
                 ->where('booking_id', $booking->id)
                 ->update(['expires_at' => null]);
             $booking->update([
-                'status' => BookingStatus::Approved,
-                'financial_status' => FinancialStatus::AwaitingPayment,
-                'payment_due_at' => $evaluatedAt->addHours(max(1, (int) config('booking.payment_deadline_hours'))),
+                'status' => $terms === null ? BookingStatus::Approved : BookingStatus::Confirmed,
+                'financial_status' => $terms === null ? FinancialStatus::AwaitingPayment : FinancialStatus::InvoiceOutstanding,
+                'payment_due_at' => $terms === null ? $evaluatedAt->addHours(max(1, (int) config('booking.payment_deadline_hours'))) : null,
+                'billing_method' => $terms === null ? BillingMethod::Card : BillingMethod::Invoice,
+                'invoice_term_days' => $terms?->term_days,
             ]);
 
             activity('booking')
@@ -134,11 +152,17 @@ class ApproveBooking
                 ->causedBy($actor)
                 ->event('booking.approved')
                 ->withProperties([
-                    'status' => BookingStatus::Approved->value,
-                    'financial_status' => FinancialStatus::AwaitingPayment->value,
+                    'status' => $booking->status->value,
+                    'financial_status' => $booking->financial_status->value,
                     'payment_due_at' => $booking->payment_due_at?->toIso8601String(),
                 ])
                 ->log('Booking approved');
+
+            if ($terms !== null) {
+                activity('booking')->performedOn($booking)->causedBy($actor)->event('booking.confirmed_under_invoice_terms')
+                    ->withProperties(['terms_id' => $terms->id, 'term_days' => $terms->term_days, 'before' => BookingStatus::Requested->value, 'after' => BookingStatus::Confirmed->value, 'financial_status' => $booking->financial_status->value])
+                    ->log('Booking confirmed under authorised invoice terms');
+            }
 
             return $booking->fresh() ?? $booking;
         });

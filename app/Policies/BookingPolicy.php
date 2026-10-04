@@ -7,6 +7,11 @@ use App\Models\User;
 
 class BookingPolicy
 {
+    public function manageInvoiceTerms(User $user, Booking $booking): bool
+    {
+        return $user->can('invoices.manage') && $user->isAssignedToCentre($booking->centre);
+    }
+
     public function viewPayment(User $user, Booking $booking): bool
     {
         return $user->can('bookings.view') && $user->id === $booking->customer_id;

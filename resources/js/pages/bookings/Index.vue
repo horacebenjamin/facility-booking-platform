@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { show as showPayment } from '@/routes/bookings/payment';
+import { index as invoiceIndex, show as showInvoice } from '@/routes/invoices';
 
 defineProps<{
     bookings: {
@@ -11,6 +12,9 @@ defineProps<{
         starts_at: string;
         status_label: string;
         financial_status_label: string;
+        billing_method: 'card' | 'invoice';
+        invoice_id: number | null;
+        invoice_reference: string | null;
     }[];
 }>();
 </script>
@@ -21,6 +25,9 @@ defineProps<{
         <Card class="mx-auto max-w-3xl">
             <CardContent class="space-y-4 py-6">
                 <h1 class="text-2xl font-semibold">My bookings</h1>
+                <Link :href="invoiceIndex()" class="text-sm underline"
+                    >My invoices</Link
+                >
                 <p class="text-sm text-muted-foreground">
                     Your latest 50 booking occurrences. Payment is available
                     after approval.
@@ -35,15 +42,32 @@ defineProps<{
                         class="space-y-2 border-b pb-4"
                     >
                         <Link
+                            v-if="booking.billing_method !== 'invoice'"
                             :href="showPayment(booking.id)"
                             class="font-medium underline"
                             >{{ booking.reference }} —
                             {{ booking.resource_name }}</Link
                         >
+                        <p v-else class="font-medium">
+                            {{ booking.reference }} —
+                            {{ booking.resource_name }}
+                        </p>
                         <p class="text-sm">
                             {{ booking.status_label }} ·
                             {{ booking.financial_status_label }}
                         </p>
+                        <template v-if="booking.billing_method === 'invoice'">
+                            <Link
+                                v-if="booking.invoice_id !== null"
+                                :href="showInvoice(booking.invoice_id)"
+                                class="text-sm underline"
+                                >Invoice {{ booking.invoice_reference }}</Link
+                            >
+                            <p v-else class="text-sm text-muted-foreground">
+                                Confirmed under invoice terms. Your invoice will
+                                be issued by the centre.
+                            </p>
+                        </template>
                     </li>
                 </ul>
             </CardContent>

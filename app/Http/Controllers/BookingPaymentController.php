@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\InitiateBookingPayment;
+use App\Enums\BillingMethod;
 use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentUnavailable;
 use App\Http\Requests\InitiateBookingPaymentRequest;
@@ -10,6 +11,7 @@ use App\Models\Booking;
 use App\Models\User;
 use App\Services\BookingPaymentEligibility;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -18,10 +20,15 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class BookingPaymentController extends Controller
 {
-    public function show(Request $request, Booking $booking, BookingPaymentEligibility $eligibility): Response
+    public function show(Request $request, Booking $booking, BookingPaymentEligibility $eligibility): Response|RedirectResponse
     {
         abort_unless($request->user()?->id === $booking->customer_id, 404);
         Gate::authorize('viewPayment', $booking);
+        if ($booking->billing_method === BillingMethod::Invoice) {
+            $line = $booking->invoiceLines()->first();
+
+            return $line === null ? redirect()->route('bookings.index') : redirect()->route('invoices.show', $line->invoice_id);
+        }
         $payment = $booking->payments()->latest('id')->first();
         $unavailableReason = null;
         $amountMinor = null;

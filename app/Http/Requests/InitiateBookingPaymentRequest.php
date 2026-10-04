@@ -23,6 +23,7 @@ class InitiateBookingPaymentRequest extends FormRequest
             'amount', 'amount_minor', 'currency', 'status', 'payment_status', 'financial_status', 'booking_status',
             'customer_id', 'booking_id', 'provider', 'provider_session_id', 'provider_payment_intent_id',
             'payment_intent', 'session_id', 'checkout_url',
+            'billing_method', 'invoice_term_days', 'invoice_id', 'invoice_eligible',
         ], ['prohibited']);
     }
 }

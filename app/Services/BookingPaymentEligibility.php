@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\BillingMethod;
 use App\Enums\BookingPriceLineType;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
@@ -16,7 +17,8 @@ class BookingPaymentEligibility
 
     public function assertLifecycle(Booking $booking, CarbonInterface $evaluatedAt): void
     {
-        if ($booking->status !== BookingStatus::Approved
+        if ($booking->billing_method !== BillingMethod::Card
+            || $booking->status !== BookingStatus::Approved
             || $booking->financial_status !== FinancialStatus::AwaitingPayment
             || $booking->payment_due_at === null
             || $booking->starts_at->lte($evaluatedAt)) {

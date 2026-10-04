@@ -13,7 +13,7 @@ class CustomerBookingController extends Controller
         abort_unless($request->user()?->can('bookings.view'), 403);
 
         return Inertia::render('bookings/Index', [
-            'bookings' => $request->user()->bookings()->with('resource')
+            'bookings' => $request->user()->bookings()->with(['resource', 'invoiceLines.invoice'])
                 ->latest('starts_at')->limit(50)->get()->map(fn ($booking): array => [
                     'id' => $booking->id,
                     'reference' => $booking->reference,
@@ -21,6 +21,9 @@ class CustomerBookingController extends Controller
                     'starts_at' => $booking->starts_at->toIso8601String(),
                     'status_label' => $booking->status->label(),
                     'financial_status_label' => $booking->financial_status->label(),
+                    'billing_method' => $booking->billing_method->value,
+                    'invoice_id' => $booking->invoiceLines->first()?->invoice_id,
+                    'invoice_reference' => $booking->invoiceLines->first()?->invoice?->reference,
                 ]),
         ]);
     }

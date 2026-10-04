@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
 use Carbon\CarbonInterface;
@@ -29,8 +30,10 @@ use Spatie\Activitylog\Models\Activity;
  * @property BookingStatus $status
  * @property FinancialStatus $financial_status
  * @property CarbonInterface|null $payment_due_at
+ * @property BillingMethod $billing_method
+ * @property int|null $invoice_term_days
  */
-#[Fillable(['booking_series_id', 'occurrence_index', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status', 'payment_due_at'])]
+#[Fillable(['booking_series_id', 'occurrence_index', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status', 'payment_due_at', 'billing_method', 'invoice_term_days'])]
 class Booking extends Model
 {
     /** @use HasFactory<BookingFactory> */
@@ -98,6 +101,12 @@ class Booking extends Model
         return $this->hasMany(Payment::class);
     }
 
+    /** @return HasMany<InvoiceLine, $this> */
+    public function invoiceLines(): HasMany
+    {
+        return $this->hasMany(InvoiceLine::class);
+    }
+
     /**
      * @return HasOne<AllocationOccupancy, $this>
      */
@@ -134,6 +143,8 @@ class Booking extends Model
             'status' => BookingStatus::class,
             'financial_status' => FinancialStatus::class,
             'payment_due_at' => 'datetime',
+            'billing_method' => BillingMethod::class,
+            'invoice_term_days' => 'integer',
         ];
     }
 }

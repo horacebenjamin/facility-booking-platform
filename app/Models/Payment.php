@@ -14,7 +14,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property int $id
  * @property string $reference
- * @property int $booking_id
+ * @property int|null $booking_id
+ * @property int|null $invoice_id
+ * @property int|null $recorded_by
+ * @property string|null $external_reference
+ * @property string|null $recording_note
  * @property int $customer_id
  * @property string $provider
  * @property string|null $provider_session_id
@@ -25,13 +29,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $currency
  * @property PaymentStatus $status
  * @property bool $live_mode
- * @property CarbonInterface $session_expires_at
+ * @property CarbonInterface|null $session_expires_at
  * @property CarbonInterface|null $succeeded_at
  * @property string|null $reconciliation_issue
  * @property CarbonInterface $created_at
  */
-#[Fillable(['reference', 'booking_id', 'customer_id', 'provider', 'provider_session_id', 'provider_payment_intent_id', 'checkout_url', 'checkout_parameters', 'amount_minor', 'currency', 'status', 'live_mode', 'session_expires_at', 'succeeded_at', 'reconciliation_issue'])]
-#[Hidden(['provider_session_id', 'provider_payment_intent_id', 'checkout_url', 'checkout_parameters', 'reconciliation_issue'])]
+#[Fillable(['reference', 'booking_id', 'invoice_id', 'recorded_by', 'external_reference', 'recording_note', 'customer_id', 'provider', 'provider_session_id', 'provider_payment_intent_id', 'checkout_url', 'checkout_parameters', 'amount_minor', 'currency', 'status', 'live_mode', 'session_expires_at', 'succeeded_at', 'reconciliation_issue'])]
+#[Hidden(['provider_session_id', 'provider_payment_intent_id', 'checkout_url', 'checkout_parameters', 'reconciliation_issue', 'external_reference', 'recording_note'])]
 class Payment extends Model
 {
     /** @use HasFactory<PaymentFactory> */
@@ -41,6 +45,18 @@ class Payment extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    /** @return BelongsTo<Invoice, $this> */
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 
     /** @return BelongsTo<User, $this> */
