@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectUsersTo(fn (Request $request): string => $request->user()?->workspaceUrl() ?? route('home', absolute: false));
         $middleware->preventRequestForgery(except: ['payments/stripe/webhook']);
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 

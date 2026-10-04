@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\SystemRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,9 +17,11 @@ class DashboardTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_visit_the_dashboard()
+    public function test_authenticated_customers_can_visit_the_dashboard()
     {
+        $this->seed(SystemRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('customer');
         $this->actingAs($user);
 
         $response = $this->get(route('dashboard'));

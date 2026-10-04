@@ -12,6 +12,9 @@ export type User = {
 
 export type Auth = {
     user: User;
+    canUseCustomerArea: boolean;
+    workspace: 'management' | 'operations' | 'customer' | 'public';
+    workspaceUrl: string;
 };
 
 export type Passkey = {

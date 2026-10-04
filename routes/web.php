@@ -12,6 +12,7 @@ use App\Http\Controllers\QuotePricingController;
 use App\Http\Controllers\StoreBookingRequestController;
 use App\Http\Controllers\StoreRecurringBookingRequestController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Middleware\EnsureCustomerRole;
 use App\Http\Middleware\VerifyStripePaymentWebhook;
 use Illuminate\Support\Facades\Route;
 
@@ -23,10 +24,11 @@ Route::post('pricing/quote', QuotePricingController::class)->name('pricing.quote
 Route::post('payments/stripe/webhook', StripeWebhookController::class)
     ->middleware(VerifyStripePaymentWebhook::class)->name('payments.stripe.webhook');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::inertia('dashboard', 'Dashboard')->middleware(['auth', 'verified', EnsureCustomerRole::class.':redirect'])->name('dashboard');
+
+Route::middleware(['auth', 'verified', EnsureCustomerRole::class])->group(function () {
     Route::get('notifications', [CustomerNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [CustomerNotificationController::class, 'read'])->name('notifications.read');
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
     Route::get('invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/{invoice}', [CustomerInvoiceController::class, 'show'])->name('invoices.show');
     Route::get('bookings', [CustomerBookingController::class, 'index'])->name('bookings.index');

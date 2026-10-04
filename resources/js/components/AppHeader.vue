@@ -41,23 +41,33 @@ const props = withDefaults(defineProps<Props>(), {
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
+const isStaffWorkspace = computed(() =>
+    ['management', 'operations'].includes(auth.value.workspace),
+);
+const workspaceLabel = computed(() =>
+    auth.value.workspace === 'management' ? 'Management' : 'Operations',
+);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Notifications',
-        href: notificationIndex(),
-        icon: Bell,
-    },
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const mainNavItems = computed<NavItem[]>(() =>
+    auth.value.canUseCustomerArea
+        ? [
+              {
+                  title: 'Notifications',
+                  href: notificationIndex(),
+                  icon: Bell,
+              },
+              {
+                  title: 'Dashboard',
+                  href: dashboard(),
+                  icon: LayoutGrid,
+              },
+          ]
+        : [],
+);
 </script>
 
 <template>
@@ -85,6 +95,11 @@ const mainNavItems: NavItem[] = [
                             </SheetHeader>
                             <div class="flex h-full flex-1 flex-col py-6">
                                 <nav class="-mx-3 space-y-1">
+                                    <a
+                                        v-if="isStaffWorkspace"
+                                        :href="auth.workspaceUrl"
+                                        >{{ workspaceLabel }}</a
+                                    >
                                     <Link
                                         v-for="item in mainNavItems"
                                         :key="item.title"
@@ -110,9 +125,13 @@ const mainNavItems: NavItem[] = [
                     </Sheet>
                 </div>
 
-                <Link :href="dashboard()" class="flex items-center gap-x-2">
+                <component
+                    :is="isStaffWorkspace ? 'a' : Link"
+                    :href="auth.workspaceUrl"
+                    class="flex items-center gap-x-2"
+                >
                     <AppLogo />
-                </Link>
+                </component>
 
                 <!-- Desktop Menu -->
                 <div class="hidden h-full lg:flex lg:flex-1">
@@ -120,6 +139,13 @@ const mainNavItems: NavItem[] = [
                         <NavigationMenuList
                             class="flex h-full items-stretch space-x-2"
                         >
+                            <NavigationMenuItem v-if="isStaffWorkspace">
+                                <a
+                                    :href="auth.workspaceUrl"
+                                    :class="navigationMenuTriggerStyle()"
+                                    >{{ workspaceLabel }}</a
+                                >
+                            </NavigationMenuItem>
                             <NavigationMenuItem
                                 v-for="(item, index) in mainNavItems"
                                 :key="index"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { Bell, LayoutGrid, Search } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -18,23 +19,35 @@ import { index as availabilityIndex } from '@/routes/availability';
 import { index as notificationIndex } from '@/routes/notifications';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Notifications',
-        href: notificationIndex(),
-        icon: Bell,
-    },
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Find a facility',
-        href: availabilityIndex(),
-        icon: Search,
-    },
-];
+const auth = computed(() => usePage().props.auth);
+const isStaffWorkspace = computed(() =>
+    ['management', 'operations'].includes(auth.value.workspace),
+);
+const workspaceLabel = computed(() =>
+    auth.value.workspace === 'management' ? 'Management' : 'Operations',
+);
+
+const mainNavItems = computed<NavItem[]>(() =>
+    auth.value.canUseCustomerArea
+        ? [
+              {
+                  title: 'Notifications',
+                  href: notificationIndex(),
+                  icon: Bell,
+              },
+              {
+                  title: 'Dashboard',
+                  href: dashboard(),
+                  icon: LayoutGrid,
+              },
+              {
+                  title: 'Find a facility',
+                  href: availabilityIndex(),
+                  icon: Search,
+              },
+          ]
+        : [],
+);
 </script>
 
 <template>
@@ -43,15 +56,28 @@ const mainNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <component
+                            :is="isStaffWorkspace ? 'a' : Link"
+                            :href="auth.workspaceUrl"
+                        >
                             <AppLogo />
-                        </Link>
+                        </component>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
 
         <SidebarContent>
+            <SidebarMenu v-if="isStaffWorkspace">
+                <SidebarMenuItem>
+                    <SidebarMenuButton as-child>
+                        <a :href="auth.workspaceUrl">
+                            <LayoutGrid />
+                            <span>{{ workspaceLabel }}</span>
+                        </a>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
             <NavMain :items="mainNavItems" />
         </SidebarContent>
 

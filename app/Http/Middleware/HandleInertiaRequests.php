@@ -40,6 +40,9 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'canUseCustomerArea' => $request->user()?->hasRole('customer') ?? false,
+                'workspace' => $request->user()?->workspace() ?? 'public',
+                'workspaceUrl' => $request->user()?->workspaceUrl() ?? route('home', absolute: false),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

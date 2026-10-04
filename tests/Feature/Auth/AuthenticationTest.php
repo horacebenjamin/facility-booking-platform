@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Database\Seeders\SystemRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
@@ -21,7 +22,9 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen()
     {
+        $this->seed(SystemRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('customer');
 
         $response = $this->post(route('login.store'), [
             'email' => $user->email,

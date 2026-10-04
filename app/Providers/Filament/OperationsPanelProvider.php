@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Operations\Pages\TodaySchedule;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -26,6 +27,7 @@ class OperationsPanelProvider extends PanelProvider
         return $panel
             ->id('operations')
             ->path('operations')
+            ->homeUrl(fn (): string => TodaySchedule::getUrl(panel: 'operations'))
             ->login()
             ->brandName('Facility4Hire Operations')
             ->colors([
@@ -35,6 +37,7 @@ class OperationsPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Operations/Pages'), for: 'App\Filament\Operations\Pages')
             ->pages([
                 Dashboard::class,
+                TodaySchedule::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Operations/Widgets'), for: 'App\Filament\Operations\Widgets')
             ->widgets([

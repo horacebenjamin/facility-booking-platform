@@ -62,6 +62,26 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, Pas
         };
     }
 
+    public function workspace(): string
+    {
+        return match (true) {
+            $this->hasRole('manager') => 'management',
+            $this->hasRole('leisure-assistant') => 'operations',
+            $this->hasRole('customer') => 'customer',
+            default => 'public',
+        };
+    }
+
+    public function workspaceUrl(): string
+    {
+        return route(match ($this->workspace()) {
+            'management' => 'filament.management.pages.dashboard',
+            'operations' => 'filament.operations.pages.dashboard',
+            'customer' => 'dashboard',
+            default => 'home',
+        }, absolute: false);
+    }
+
     /**
      * @return BelongsToMany<Centre, $this>
      */
