@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\BookingPriceLineType;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
+use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\BookingSubmissionUnavailable;
 use App\Models\AllocationOccupancy;
 use App\Models\Booking;
@@ -18,6 +19,7 @@ use App\Models\Resource;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Spatie\Activitylog\Models\Activity;
 
 class BookingRequestEngine
 {
@@ -185,7 +187,11 @@ class BookingRequestEngine
             ]);
         }
 
-        $activity->log('Booking requested');
+        $recordedActivity = $activity->log('Booking requested');
+
+        if ($recordedActivity instanceof Activity) {
+            LifecycleNotificationRequested::dispatch($recordedActivity->id);
+        }
 
         return $booking;
     }

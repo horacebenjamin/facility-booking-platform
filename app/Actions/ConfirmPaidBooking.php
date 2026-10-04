@@ -5,11 +5,13 @@ namespace App\Actions;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
 use App\Enums\PaymentStatus;
+use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\PaymentUnavailable;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Services\BookingPaymentEligibility;
 use Carbon\CarbonInterface;
+use Spatie\Activitylog\Models\Activity;
 
 class ConfirmPaidBooking
 {
@@ -40,9 +42,13 @@ class ConfirmPaidBooking
         }
 
         $booking->update(['status' => BookingStatus::Confirmed, 'financial_status' => FinancialStatus::Paid]);
-        activity('booking')->performedOn($booking)->event('booking.confirmed')
+        $activity = activity('booking')->performedOn($booking)->event('booking.confirmed')
             ->withProperties(['payment_reference' => $payment->reference])
             ->log('Booking confirmed after verified payment');
+
+        if ($activity instanceof Activity) {
+            LifecycleNotificationRequested::dispatch($activity->id);
+        }
 
         return true;
     }

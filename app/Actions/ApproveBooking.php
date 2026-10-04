@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
+use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
 use App\Exceptions\PaymentUnavailable;
 use App\Models\AllocationOccupancy;
@@ -25,6 +26,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Spatie\Activitylog\Models\Activity;
 
 class ApproveBooking
 {
@@ -147,7 +149,7 @@ class ApproveBooking
                 'invoice_term_days' => $terms?->term_days,
             ]);
 
-            activity('booking')
+            $approvalActivity = activity('booking')
                 ->performedOn($booking)
                 ->causedBy($actor)
                 ->event('booking.approved')
@@ -158,10 +160,18 @@ class ApproveBooking
                 ])
                 ->log('Booking approved');
 
+            if ($terms === null && $approvalActivity instanceof Activity) {
+                LifecycleNotificationRequested::dispatch($approvalActivity->id);
+            }
+
             if ($terms !== null) {
-                activity('booking')->performedOn($booking)->causedBy($actor)->event('booking.confirmed_under_invoice_terms')
+                $confirmationActivity = activity('booking')->performedOn($booking)->causedBy($actor)->event('booking.confirmed_under_invoice_terms')
                     ->withProperties(['terms_id' => $terms->id, 'term_days' => $terms->term_days, 'before' => BookingStatus::Requested->value, 'after' => BookingStatus::Confirmed->value, 'financial_status' => $booking->financial_status->value])
                     ->log('Booking confirmed under authorised invoice terms');
+
+                if ($confirmationActivity instanceof Activity) {
+                    LifecycleNotificationRequested::dispatch($confirmationActivity->id);
+                }
             }
 
             return $booking->fresh() ?? $booking;

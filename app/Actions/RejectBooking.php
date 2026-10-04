@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Enums\BookingStatus;
+use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
 use App\Models\AllocationOccupancy;
 use App\Models\Booking;
@@ -12,6 +13,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use Spatie\Activitylog\Models\Activity;
 
 class RejectBooking
 {
@@ -60,12 +62,16 @@ class RejectBooking
 
             $booking->update(['status' => BookingStatus::Rejected]);
 
-            activity('booking')
+            $activity = activity('booking')
                 ->performedOn($booking)
                 ->causedBy($actor)
                 ->event('booking.rejected')
                 ->withProperties(['reason' => $reason])
                 ->log('Booking rejected');
+
+            if ($activity instanceof Activity) {
+                LifecycleNotificationRequested::dispatch($activity->id);
+            }
 
             return $booking->fresh() ?? $booking;
         });

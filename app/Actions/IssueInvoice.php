@@ -6,6 +6,7 @@ use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
 use App\Enums\InvoiceStatus;
+use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\InvoiceUnavailable;
 use App\Exceptions\PaymentUnavailable;
 use App\Models\Booking;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 
 class IssueInvoice
 {
@@ -77,9 +79,13 @@ class IssueInvoice
                     ->withProperties(['invoice_reference' => $invoice->reference, 'before' => FinancialStatus::InvoiceOutstanding->value, 'after' => FinancialStatus::Invoiced->value])
                     ->log('Booking charge invoiced');
             }
-            activity('invoice')->performedOn($invoice)->causedBy($actor)->event('invoice.issued')
+            $activity = activity('invoice')->performedOn($invoice)->causedBy($actor)->event('invoice.issued')
                 ->withProperties(['booking_ids' => $bookingIds, 'total_minor' => $invoice->total_minor, 'currency' => $currency, 'due_date' => $invoice->due_date->toDateString()])
                 ->log('Invoice issued');
+
+            if ($activity instanceof Activity) {
+                LifecycleNotificationRequested::dispatch($activity->id);
+            }
 
             return $invoice->load('lines');
         });

@@ -7,6 +7,7 @@ use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
+use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\InvoiceUnavailable;
 use App\Exceptions\PaymentUnavailable;
 use App\Models\Booking;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 
 class RecordManualInvoicePayment
 {
@@ -72,12 +74,16 @@ class RecordManualInvoicePayment
                     ->withProperties(['invoice_reference' => $invoice->reference, 'payment_reference' => $payment->reference, 'before' => FinancialStatus::Invoiced->value, 'after' => FinancialStatus::Paid->value])
                     ->log('Invoiced booking settled');
             }
-            activity('payment')->performedOn($payment)->causedBy($actor)->event('payment.manual_recorded')
+            $activity = activity('payment')->performedOn($payment)->causedBy($actor)->event('payment.manual_recorded')
                 ->withProperties(['invoice_reference' => $invoice->reference, 'amount_minor' => $payment->amount_minor, 'currency' => $payment->currency])
                 ->log('Offline invoice settlement recorded');
             activity('invoice')->performedOn($invoice)->causedBy($actor)->event('invoice.paid')
                 ->withProperties(['payment_reference' => $payment->reference, 'before' => InvoiceStatus::Issued->value, 'after' => InvoiceStatus::Paid->value])
                 ->log('Invoice settled');
+
+            if ($activity instanceof Activity) {
+                LifecycleNotificationRequested::dispatch($activity->id);
+            }
 
             return $payment;
         });

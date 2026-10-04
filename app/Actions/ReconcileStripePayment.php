@@ -3,12 +3,14 @@
 namespace App\Actions;
 
 use App\Enums\PaymentStatus;
+use App\Events\LifecycleNotificationRequested;
 use App\Models\Booking;
 use App\Models\Payment;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Spatie\Activitylog\Models\Activity;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class ReconcileStripePayment
@@ -128,7 +130,7 @@ class ReconcileStripePayment
                 'provider_payment_intent_id' => $intent ?? $payment->provider_payment_intent_id,
                 'succeeded_at' => $status === PaymentStatus::Succeeded ? $createdAt : null,
             ]);
-            activity('payment')->performedOn($payment)->event('payment.'.$status->value)
+            $outcomeActivity = activity('payment')->performedOn($payment)->event('payment.'.$status->value)
                 ->withProperties(['provider_event_id' => $event['id'], 'booking_id' => $booking->id])
                 ->log('Verified payment outcome reconciled');
 
@@ -139,6 +141,10 @@ class ReconcileStripePayment
                 activity('payment')->performedOn($payment)->event('payment.review_required')
                     ->withProperties(['booking_id' => $booking->id])
                     ->log('Received payment requires booking review');
+            }
+
+            if ($status === PaymentStatus::Succeeded && $outcomeActivity instanceof Activity) {
+                LifecycleNotificationRequested::dispatch($outcomeActivity->id);
             }
         });
     }

@@ -6,6 +6,7 @@ use App\Http\Controllers\BookingReviewController;
 use App\Http\Controllers\CheckAvailabilityController;
 use App\Http\Controllers\CustomerBookingController;
 use App\Http\Controllers\CustomerInvoiceController;
+use App\Http\Controllers\CustomerNotificationController;
 use App\Http\Controllers\PreviewRecurringBookingRequestController;
 use App\Http\Controllers\QuotePricingController;
 use App\Http\Controllers\StoreBookingRequestController;
@@ -23,6 +24,8 @@ Route::post('payments/stripe/webhook', StripeWebhookController::class)
     ->middleware(VerifyStripePaymentWebhook::class)->name('payments.stripe.webhook');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('notifications', [CustomerNotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('notifications/{notification}/read', [CustomerNotificationController::class, 'read'])->name('notifications.read');
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
     Route::get('invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/{invoice}', [CustomerInvoiceController::class, 'show'])->name('invoices.show');

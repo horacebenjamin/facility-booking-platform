@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, Menu } from '@lucide/vue';
+import { Bell, LayoutGrid, Menu } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
@@ -28,6 +28,7 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { getInitials } from '@/composables/useInitials';
 import { dashboard } from '@/routes';
+import { index as notificationIndex } from '@/routes/notifications';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -46,6 +47,11 @@ const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
 const mainNavItems: NavItem[] = [
+    {
+        title: 'Notifications',
+        href: notificationIndex(),
+        icon: Bell,
+    },
     {
         title: 'Dashboard',
         href: dashboard(),
