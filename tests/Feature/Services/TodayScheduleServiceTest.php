@@ -2,6 +2,10 @@
 
 namespace Tests\Feature\Services;
 
+use App\Actions\CompleteBooking;
+use App\Actions\RecordArrival;
+use App\Actions\RecordNoShow;
+use App\Enums\AttendanceState;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
 use App\Models\Booking;
@@ -182,7 +186,7 @@ class TodayScheduleServiceTest extends TestCase
         $this->assertSame($booking->facility->name, $session->facilityName);
         $this->assertSame($booking->resource->name, $session->resourceName);
         $this->assertSame($booking->customer->name, $session->customerName);
-        $this->assertSame(['bookingId', 'reference', 'customerName', 'facilityName', 'resourceName', 'startsAt', 'endsAt', 'operationalStartsAt', 'operationalEndsAt', 'seriesIdentifier', 'occurrenceIndex', 'occurrenceCount', 'equipment'], array_keys(get_object_vars($session)));
+        $this->assertSame(['bookingId', 'reference', 'customerName', 'facilityName', 'resourceName', 'startsAt', 'endsAt', 'operationalStartsAt', 'operationalEndsAt', 'seriesIdentifier', 'occurrenceIndex', 'occurrenceCount', 'equipment', 'attendanceState', 'arrivedAt', 'noShowRecordedAt', 'completedAt', 'availableTransitions'], array_keys(get_object_vars($session)));
         $request->update(['requested_quantity' => 5]);
         $request->equipment->update(['name' => 'Updated equipment']);
         $booking->resource->update(['setup_minutes' => 20, 'name' => 'Updated resource']);
@@ -237,6 +241,53 @@ class TodayScheduleServiceTest extends TestCase
 
         $this->assertCount(5, $schedule->sessions);
         $this->assertSame($singleCount, $multipleCount);
+    }
+
+    public function test_schedule_reflects_attendance_and_retains_terminal_outcomes_in_the_full_day(): void
+    {
+        $booking = $this->booking();
+        $booking->resource->update(['setup_minutes' => 15, 'cleanup_minutes' => 10]);
+        $other = $this->booking(['resource_id' => $booking->resource_id]);
+        $staff = $this->assistant($booking->centre);
+        $service = app(TodayScheduleService::class);
+        $before = $service->forDate($staff, $booking->centre, '2026-10-04');
+        $this->assertSame([AttendanceState::Arrived], $before->sessions[0]->availableTransitions);
+
+        app(RecordArrival::class)->handle($staff, $booking);
+        $arrived = $service->forDate($staff, $booking->centre, '2026-10-04');
+        $this->assertSame(AttendanceState::Arrived, $arrived->sessions[0]->attendanceState);
+        $this->assertSame('16:45', $arrived->sessions[0]->arrivedAt?->format('H:i'));
+        $this->assertSame([], $arrived->sessions[0]->availableTransitions);
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-04 18:00:00', config('app.timezone')));
+        app(RecordNoShow::class)->handle($staff, $other);
+        $noShow = $service->forDate($staff, $booking->centre, '2026-10-04');
+        $this->assertSame([$booking->id], array_column($noShow->now, 'bookingId'));
+        $this->assertSame(AttendanceState::NoShow, $noShow->sessions[1]->attendanceState);
+        $this->assertSame([], $noShow->sessions[1]->availableTransitions);
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-04 18:10:00', config('app.timezone')));
+        app(CompleteBooking::class)->handle($staff, $booking);
+        $completed = $service->forDate($staff, $booking->centre, '2026-10-04');
+        $this->assertSame([$booking->id, $other->id], array_column($completed->sessions, 'bookingId'));
+        $this->assertSame(AttendanceState::Completed, $completed->sessions[0]->attendanceState);
+        $this->assertSame([], $completed->now);
+        $this->assertSame([], $completed->sessions[0]->availableTransitions);
+        $this->assertDatabaseCount('bookings', 2);
+        $this->assertDatabaseCount('activity_log', 3);
+    }
+
+    public function test_schedule_without_attendance_permission_still_displays_sessions_but_offers_no_mutations(): void
+    {
+        $booking = $this->booking();
+        $booking->resource->update(['setup_minutes' => 15]);
+        $staff = $this->assistant($booking->centre);
+        $staff->roles()->firstOrFail()->revokePermissionTo('attendance.manage');
+
+        $session = app(TodayScheduleService::class)->forDate($staff, $booking->centre, '2026-10-04')->sessions[0];
+
+        $this->assertSame(AttendanceState::Expected, $session->attendanceState);
+        $this->assertSame([], $session->availableTransitions);
     }
 
     /** @param array<string, mixed> $attributes */

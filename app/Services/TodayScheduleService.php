@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AttendanceState;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\BookingEquipment;
@@ -15,7 +16,10 @@ use Illuminate\Support\Facades\Validator;
 
 class TodayScheduleService
 {
-    public function __construct(private OperationalOccupancyCalculator $occupancyCalculator) {}
+    public function __construct(
+        private OperationalOccupancyCalculator $occupancyCalculator,
+        private AttendanceEligibility $attendanceEligibility,
+    ) {}
 
     /** @return Collection<int, Centre> */
     public function authorizedCentres(User $staff): Collection
@@ -38,6 +42,7 @@ class TodayScheduleService
         $dayStart = CarbonImmutable::parse($date, config('app.timezone'))->startOfDay();
         $dayEnd = $dayStart->addDay();
         $refreshedAt = CarbonImmutable::now(config('app.timezone'));
+        $canManageAttendance = $staff->can('attendance.manage');
         $resources = Resource::query()
             ->whereHas('facility', fn ($query) => $query->where('centre_id', $centre->id))
             ->get(['id', 'facility_id', 'name', 'setup_minutes', 'cleanup_minutes'])
@@ -59,7 +64,7 @@ class TodayScheduleService
                 'equipmentRequests:id,booking_id,equipment_id,requested_quantity',
                 'equipmentRequests.equipment:id,name',
             ])
-            ->get(['id', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'booking_series_id', 'occurrence_index', 'starts_at', 'ends_at']);
+            ->get(['id', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'booking_series_id', 'occurrence_index', 'starts_at', 'ends_at', 'status', 'attendance_state', 'arrived_at', 'no_show_recorded_at', 'completed_at']);
 
         $sessions = [];
 
@@ -93,6 +98,11 @@ class TodayScheduleService
                     'name' => $request->equipment->name,
                     'quantity' => $request->requested_quantity,
                 ])->all()),
+                attendanceState: $booking->attendance_state,
+                arrivedAt: $booking->arrived_at === null ? null : CarbonImmutable::instance($booking->arrived_at)->setTimezone(config('app.timezone')),
+                noShowRecordedAt: $booking->no_show_recorded_at === null ? null : CarbonImmutable::instance($booking->no_show_recorded_at)->setTimezone(config('app.timezone')),
+                completedAt: $booking->completed_at === null ? null : CarbonImmutable::instance($booking->completed_at)->setTimezone(config('app.timezone')),
+                availableTransitions: $canManageAttendance ? $this->attendanceEligibility->availableTransitions($booking, $refreshedAt, $period) : [],
             );
         }
 
@@ -104,6 +114,10 @@ class TodayScheduleService
         $next = [];
 
         foreach ($sessions as $session) {
+            if (in_array($session->attendanceState, [AttendanceState::NoShow, AttendanceState::Completed], true)) {
+                continue;
+            }
+
             if ($session->operationalStartsAt->lte($refreshedAt) && $session->operationalEndsAt->gt($refreshedAt)) {
                 $now[] = $session;
             } elseif ($session->operationalStartsAt->gt($refreshedAt)

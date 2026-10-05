@@ -7,6 +7,15 @@ use App\Models\User;
 
 class BookingPolicy
 {
+    public function manageAttendance(User $user, Booking $booking): bool
+    {
+        return $user->exists
+            && $user->hasRole('leisure-assistant')
+            && $user->can('bookings.view')
+            && $user->can('attendance.manage')
+            && $user->isAssignedToCentre($booking->centre);
+    }
+
     public function manageInvoiceTerms(User $user, Booking $booking): bool
     {
         return $user->can('invoices.manage') && $user->isAssignedToCentre($booking->centre);

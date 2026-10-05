@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AttendanceState;
 use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
@@ -28,6 +29,10 @@ use Spatie\Activitylog\Models\Activity;
  * @property CarbonInterface $starts_at
  * @property CarbonInterface $ends_at
  * @property BookingStatus $status
+ * @property AttendanceState $attendance_state
+ * @property CarbonInterface|null $arrived_at
+ * @property CarbonInterface|null $no_show_recorded_at
+ * @property CarbonInterface|null $completed_at
  * @property FinancialStatus $financial_status
  * @property CarbonInterface|null $payment_due_at
  * @property BillingMethod $billing_method
@@ -141,6 +146,10 @@ class Booking extends Model
             'ends_at' => 'datetime',
             'occurrence_index' => 'integer',
             'status' => BookingStatus::class,
+            'attendance_state' => AttendanceState::class,
+            'arrived_at' => 'datetime',
+            'no_show_recorded_at' => 'datetime',
+            'completed_at' => 'datetime',
             'financial_status' => FinancialStatus::class,
             'payment_due_at' => 'datetime',
             'billing_method' => BillingMethod::class,

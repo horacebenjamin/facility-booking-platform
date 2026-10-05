@@ -8,6 +8,9 @@
         .today-schedule-session h3 { font-weight: 600; }
         .today-schedule-equipment { list-style: disc; padding-inline-start: 1.25rem; }
         .today-schedule-meta { font-size: .875rem; }
+        .today-schedule-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+        .today-schedule-actions button { min-height: 2.75rem; }
+        @media (max-width: 47.99rem) { .today-schedule-actions button { flex: 1 1 100%; } }
         @media (min-width: 48rem) {
             .today-schedule-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
             .today-schedule-priorities { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
