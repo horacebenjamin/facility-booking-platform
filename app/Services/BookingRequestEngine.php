@@ -27,6 +27,7 @@ class BookingRequestEngine
         private AvailabilityService $availabilityService,
         private OperationalOccupancyCalculator $operationalOccupancyCalculator,
         private PricingService $pricingService,
+        private CentreReservationLock $centreReservationLock,
     ) {}
 
     /**
@@ -40,16 +41,20 @@ class BookingRequestEngine
     /**
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
      */
-    public function lockContext(int $resourceId, array $equipmentSelections): BookingRequestContext
+    public function lockContext(int $resourceId, array $equipmentSelections, int $centreId): BookingRequestContext
     {
-        return $this->resolveContext($resourceId, $equipmentSelections, true);
+        return $this->resolveContext($resourceId, $equipmentSelections, true, $centreId);
     }
 
     /**
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
      */
-    private function resolveContext(int $resourceId, array $equipmentSelections, bool $lock): BookingRequestContext
+    private function resolveContext(int $resourceId, array $equipmentSelections, bool $lock, ?int $centreId = null): BookingRequestContext
     {
+        if ($lock) {
+            $this->centreReservationLock->lock($centreId ?? throw new \LogicException('A centre is required for reservation locking.'));
+        }
+
         $resourceQuery = Resource::query();
 
         if ($lock) {
@@ -57,6 +62,12 @@ class BookingRequestEngine
         }
 
         $resource = $resourceQuery->findOrFail($resourceId);
+        $resource->load('facility.centre');
+
+        if ($lock && $resource->facility->centre_id !== $centreId) {
+            throw new BookingSubmissionUnavailable;
+        }
+
         $allocationUnitsQuery = $resource->allocationUnits()->orderBy('allocation_units.id');
 
         if ($lock) {
@@ -65,8 +76,6 @@ class BookingRequestEngine
 
         $allocationUnits = $allocationUnitsQuery->get();
         $equipmentById = $this->equipment($equipmentSelections, $lock);
-
-        $resource->load('facility.centre');
 
         return new BookingRequestContext(
             resource: $resource,

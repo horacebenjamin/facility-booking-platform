@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\AvailabilityBlock;
 use App\Models\Resource;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 
 class AvailabilityBlockEvaluator
 {
+    public function __construct(private AvailabilityBlockScopeMatcher $scopeMatcher) {}
+
     public function isBlocked(
         Resource $resource,
         CarbonInterface $startsAt,
@@ -22,18 +22,14 @@ class AvailabilityBlockEvaluator
             return false;
         }
 
-        return AvailabilityBlock::query()
+        return $this->scopeMatcher->blocksFor($resource)
             ->where('starts_at', '<', $requestedPeriod['endsAt'])
             ->where('ends_at', '>', $requestedPeriod['startsAt'])
-            ->where(function (Builder $query) use ($resource): void {
-                $query
-                    ->where('resource_id', $resource->id)
-                    ->orWhere('facility_id', $resource->facility_id)
-                    ->orWhere('centre_id', function (QueryBuilder $query) use ($resource): void {
-                        $query
-                            ->select('centre_id')
-                            ->from('facilities')
-                            ->where('id', $resource->facility_id);
+            ->where(function (Builder $query) use ($requestedPeriod): void {
+                $query->whereNull('ended_at')
+                    ->orWhere(function (Builder $query) use ($requestedPeriod): void {
+                        $query->whereColumn('ended_at', '>', 'starts_at')
+                            ->where('ended_at', '>', $requestedPeriod['startsAt']);
                     });
             })
             ->exists();

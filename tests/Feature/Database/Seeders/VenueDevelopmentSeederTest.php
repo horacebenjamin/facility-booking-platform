@@ -58,16 +58,20 @@ class VenueDevelopmentSeederTest extends TestCase
         $this->assertSame(15, $wholeSportsHall->cleanup_minutes);
 
         $manager = User::query()->where('email', 'manager@facility4hire.test')->sole();
+        $riversideManager = User::query()->where('email', 'riverside.manager@facility4hire.test')->sole();
         $leisureAssistant = User::query()->where('email', 'assistant@facility4hire.test')->sole();
 
         $this->assertTrue($manager->hasRole('manager'));
         $this->assertSame(['manager'], $manager->roles()->pluck('name')->all());
         $this->assertSame([$hillside->id, $riverside->id], $manager->assignedCentres()->orderBy('centres.id')->pluck('centres.id')->all());
+        $this->assertTrue($riversideManager->hasRole('manager'));
+        $this->assertSame(['manager'], $riversideManager->roles()->pluck('name')->all());
+        $this->assertSame([$riverside->id], $riversideManager->assignedCentres()->pluck('centres.id')->all());
         $this->assertTrue($leisureAssistant->hasRole('leisure-assistant'));
         $this->assertSame(['leisure-assistant'], $leisureAssistant->roles()->pluck('name')->all());
         $this->assertSame([$riverside->id], $leisureAssistant->assignedCentres()->pluck('centres.id')->all());
         $this->assertSame(
-            ['assistant@facility4hire.test', 'manager@facility4hire.test'],
+            ['assistant@facility4hire.test', 'manager@facility4hire.test', 'riverside.manager@facility4hire.test'],
             $riverside->assignedUsers()->orderBy('email')->pluck('email')->all(),
         );
     }
@@ -86,7 +90,7 @@ class VenueDevelopmentSeederTest extends TestCase
         $this->assertDatabaseCount('centre_operating_hours', 14);
         $this->assertDatabaseCount('facility_bookable_hours', 28);
         $this->assertDatabaseCount('resource_bookable_hours', 70);
-        $this->assertDatabaseCount('centre_user', 3);
+        $this->assertDatabaseCount('centre_user', 4);
     }
 
     private function seedVenueDevelopmentData(): void

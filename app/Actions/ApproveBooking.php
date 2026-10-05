@@ -19,6 +19,7 @@ use App\Models\Resource;
 use App\Models\User;
 use App\Services\AvailabilityService;
 use App\Services\BookingPaymentEligibility;
+use App\Services\CentreReservationLock;
 use App\Services\EquipmentRequirement;
 use App\Services\OperationalOccupancyCalculator;
 use Carbon\CarbonImmutable;
@@ -34,6 +35,7 @@ class ApproveBooking
         private AvailabilityService $availabilityService,
         private OperationalOccupancyCalculator $operationalOccupancyCalculator,
         private BookingPaymentEligibility $paymentEligibility,
+        private CentreReservationLock $centreReservationLock,
     ) {}
 
     public function handle(User $actor, Booking $booking): Booking
@@ -41,11 +43,18 @@ class ApproveBooking
         $this->authorize($actor);
         Gate::forUser($actor)->authorize('approve', $booking);
 
-        return DB::transaction(function () use ($actor, $booking): Booking {
+        $centreId = $this->centreReservationLock->centreIdForBooking($booking->id);
+
+        return DB::transaction(function () use ($actor, $booking, $centreId): Booking {
+            $this->centreReservationLock->lock($centreId);
             $booking = Booking::query()
                 ->with('centre')
                 ->lockForUpdate()
                 ->findOrFail($booking->id);
+
+            if ($booking->centre_id !== $centreId) {
+                throw new BookingLifecycleTransitionUnavailable('The booking centre has changed. Refresh before approving.');
+            }
 
             $this->authorize($actor);
             Gate::forUser($actor)->authorize('approve', $booking);
@@ -64,6 +73,11 @@ class ApproveBooking
                 ->with('facility.centre')
                 ->lockForUpdate()
                 ->findOrFail($booking->resource_id);
+
+            if ($resource->facility->centre_id !== $centreId) {
+                throw new BookingLifecycleTransitionUnavailable('The resource centre has changed. Refresh before approving.');
+            }
+
             $allocationUnits = $resource->allocationUnits()
                 ->orderBy('allocation_units.id')
                 ->lockForUpdate()

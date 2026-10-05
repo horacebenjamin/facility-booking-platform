@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AvailabilityBlockType;
 use App\Models\AvailabilityBlock;
 use App\Models\Centre;
 use App\Models\Facility;
@@ -29,6 +30,7 @@ class AvailabilityBlockFactory extends Factory
             'starts_at' => $startsAt,
             'ends_at' => (clone $startsAt)->modify('+2 hours'),
             'reason' => fake()->optional()->sentence(),
+            'type' => AvailabilityBlockType::Other,
         ];
     }
 

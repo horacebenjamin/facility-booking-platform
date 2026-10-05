@@ -10,6 +10,7 @@ use App\Enums\DayOfWeek;
 use App\Enums\FinancialStatus;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
 use App\Filament\Resources\Bookings\BookingResource;
+use App\Filament\Resources\Bookings\Pages\ListBookings;
 use App\Filament\Resources\Bookings\Pages\ViewBooking;
 use App\Models\AllocationOccupancy;
 use App\Models\AllocationUnit;
@@ -88,6 +89,44 @@ class BookingReviewTest extends TestCase
         $this->assertTrue(Gate::allows('view', $assignedBooking));
         $this->assertFalse(Gate::allows('view', $otherBooking));
         $this->get(BookingResource::getUrl('view', ['record' => $otherBooking]))->assertNotFound();
+    }
+
+    public function test_authorised_manager_can_view_a_confirmed_booking_without_management_actions_or_mutation(): void
+    {
+        $booking = $this->protectedBooking();
+        $booking->forceFill([
+            'status' => BookingStatus::Confirmed,
+            'financial_status' => FinancialStatus::Invoiced,
+            'attendance_state' => 'expected',
+        ])->save();
+        $manager = $this->assignedManager($booking->centre);
+        $before = $booking->fresh()->getRawOriginal();
+        $this->actingAs($manager);
+
+        $this->get(BookingResource::getUrl('view', ['record' => $booking]))
+            ->assertOk()
+            ->assertSee($booking->reference)
+            ->assertSee('Confirmed')
+            ->assertSee('Invoiced')
+            ->assertSee('Expected');
+
+        Livewire::test(ViewBooking::class, ['record' => $booking->getRouteKey()])
+            ->assertActionHidden('approve')
+            ->assertActionHidden('invoiceTerms')
+            ->assertActionHidden('reject');
+
+        $this->assertSame($before, $booking->fresh()->getRawOriginal());
+    }
+
+    public function test_manager_cannot_view_a_confirmed_booking_outside_their_centre_scope(): void
+    {
+        $assignedCentre = Centre::factory()->create();
+        $foreignBooking = Booking::factory()->create(['status' => BookingStatus::Confirmed]);
+        $manager = $this->assignedManager($assignedCentre);
+
+        $this->actingAs($manager)
+            ->get(BookingResource::getUrl('view', ['record' => $foreignBooking]))
+            ->assertNotFound();
     }
 
     public function test_customer_cannot_access_management_booking_review(): void
@@ -547,8 +586,10 @@ class BookingReviewTest extends TestCase
             'financial_status' => 'awaiting_payment',
         ], $activity->properties->all());
         $this->assertModelExists($booking);
-        $this->assertFalse(BookingResource::getEloquentQuery()->whereKey($booking)->exists());
-        $this->get(BookingResource::getUrl('view', ['record' => $booking]))->assertNotFound();
+        Livewire::test(ListBookings::class)->assertCanNotSeeTableRecords([$booking]);
+        $this->get(BookingResource::getUrl('view', ['record' => $booking]))
+            ->assertOk()
+            ->assertSee($booking->reference);
     }
 
     public function test_review_rejection_form_requires_a_reason_without_mutation(): void

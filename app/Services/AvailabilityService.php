@@ -53,11 +53,15 @@ class AvailabilityService
             $reasons[] = AvailabilityReason::OutsideBookableHours;
         }
 
-        if ($this->availabilityBlockEvaluator->isBlocked($resource, $startsAt, $endsAt)) {
+        $operationalPeriod = $this->operationalOccupancyCalculator->calculate($resource, $startsAt, $endsAt);
+
+        if ($operationalPeriod !== null && $this->availabilityBlockEvaluator->isBlocked(
+            $resource,
+            $operationalPeriod->startsAt,
+            $operationalPeriod->endsAt,
+        )) {
             $reasons[] = AvailabilityReason::Blockout;
         }
-
-        $operationalPeriod = $this->operationalOccupancyCalculator->calculate($resource, $startsAt, $endsAt);
 
         if ($operationalPeriod !== null && $this->allocationConflictEvaluator->hasConflict(
             $resource,

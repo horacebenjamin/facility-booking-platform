@@ -42,7 +42,9 @@ class ViewBooking extends ViewRecord
                 ->action(fn (): mixed => $this->approveBooking()),
             Action::make('invoiceTerms')
                 ->label('Customer invoice terms')
-                ->visible(fn (): bool => $this->actor()->can('invoices.manage') && $this->actor()->can('view', $this->booking()))
+                ->visible(fn (): bool => $this->booking()->status === BookingStatus::Requested
+                    && $this->actor()->can('invoices.manage')
+                    && $this->actor()->can('view', $this->booking()))
                 ->fillForm(function (): array {
                     $terms = $this->invoiceTerms();
 

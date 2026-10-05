@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Bookings;
 
+use App\Enums\AttendanceState;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
 use App\Filament\Resources\Bookings\Pages\ListBookings;
@@ -35,6 +36,7 @@ class BookingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('status', BookingStatus::Requested->value))
             ->defaultSort('created_at')
             ->columns([
                 TextColumn::make('reference')->searchable()->sortable(),
@@ -73,14 +75,16 @@ class BookingResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Booking request')->schema([
+            Section::make('Booking')->schema([
                 TextEntry::make('reference')->label('Booking reference')->copyable(),
                 TextEntry::make('status')->label('Booking state')->badge()->formatStateUsing(fn (BookingStatus $state): string => $state->label()),
                 TextEntry::make('financial_status')->label('Financial state')->badge()->formatStateUsing(fn (FinancialStatus $state): string => $state->label()),
+                TextEntry::make('attendance_state')->label('Attendance state')->badge()->formatStateUsing(fn (AttendanceState $state): string => $state->label()),
                 TextEntry::make('allocationOccupancy.expires_at')
                     ->label('Provisional protection expires')
                     ->dateTime('j M Y, H:i')
                     ->placeholder('Protection is missing')
+                    ->visible(fn (Booking $record): bool => $record->status === BookingStatus::Requested)
                     ->helperText(fn (?CarbonInterface $state): string => $state?->isFuture()
                         ? 'Protection is active and will be revalidated before approval.'
                         : 'Protection is expired or missing. Approval is unavailable.'),
@@ -178,7 +182,6 @@ class BookingResource extends Resource
                 'priceSnapshot.lines',
                 'activities.causer',
             ])
-            ->where('status', BookingStatus::Requested->value)
             ->whereHas('centre.assignedUsers', fn (Builder $query): Builder => $query->whereKey(auth()->id()));
     }
 

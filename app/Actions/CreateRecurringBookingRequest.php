@@ -6,6 +6,7 @@ use App\Models\BookingSeries;
 use App\Models\User;
 use App\Services\BookingRequestEngine;
 use App\Services\BookingSeriesValidator;
+use App\Services\CentreReservationLock;
 use App\Services\CreateBookingSeriesResult;
 use App\Services\RecurrenceGenerator;
 use App\Services\RecurrencePattern;
@@ -21,6 +22,7 @@ class CreateRecurringBookingRequest
         private RecurrenceGenerator $recurrenceGenerator,
         private BookingRequestEngine $bookingRequestEngine,
         private BookingSeriesValidator $bookingSeriesValidator,
+        private CentreReservationLock $centreReservationLock,
     ) {}
 
     /**
@@ -40,8 +42,10 @@ class CreateRecurringBookingRequest
         $periods = $this->recurrenceGenerator->generate($firstStartsAt, $firstEndsAt, $pattern);
         $this->validateSelectedOccurrenceIndexes($selectedOccurrenceIndexes, $pattern->occurrenceCount);
 
-        return DB::transaction(function () use ($customer, $resourceId, $pattern, $equipmentSelections, $periods, $selectedOccurrenceIndexes): CreateBookingSeriesResult {
-            $context = $this->bookingRequestEngine->lockContext($resourceId, $equipmentSelections);
+        $centreId = $this->centreReservationLock->centreIdForResource($resourceId);
+
+        return DB::transaction(function () use ($centreId, $customer, $resourceId, $pattern, $equipmentSelections, $periods, $selectedOccurrenceIndexes): CreateBookingSeriesResult {
+            $context = $this->bookingRequestEngine->lockContext($resourceId, $equipmentSelections, $centreId);
             $evaluatedAt = CarbonImmutable::now(config('app.timezone'));
             $validation = $this->bookingSeriesValidator->validate($context, $periods, $evaluatedAt);
             $occurrencesToPersist = $validation->validOccurrences;

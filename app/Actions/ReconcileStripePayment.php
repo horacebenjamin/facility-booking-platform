@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Events\LifecycleNotificationRequested;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Services\CentreReservationLock;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -22,7 +23,10 @@ class ReconcileStripePayment
         'checkout.session.expired',
     ];
 
-    public function __construct(private ConfirmPaidBooking $confirmPaidBooking) {}
+    public function __construct(
+        private ConfirmPaidBooking $confirmPaidBooking,
+        private CentreReservationLock $centreReservationLock,
+    ) {}
 
     /** @param array<string, mixed> $event */
     public function handle(array $event): void
@@ -58,8 +62,16 @@ class ReconcileStripePayment
             return;
         }
 
-        DB::transaction(function () use ($candidate, $event, $session): void {
+        $centreId = $this->centreReservationLock->centreIdForBooking($candidate->booking_id);
+
+        DB::transaction(function () use ($candidate, $event, $session, $centreId): void {
+            $this->centreReservationLock->lock($centreId);
             $booking = Booking::query()->lockForUpdate()->findOrFail($candidate->booking_id);
+
+            if ($booking->centre_id !== $centreId) {
+                throw new ServiceUnavailableHttpException(30, 'The booking centre changed during reconciliation.');
+            }
+
             $payment = Payment::query()->lockForUpdate()->findOrFail($candidate->id);
 
             if ($payment->provider_session_id === null) {

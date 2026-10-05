@@ -18,7 +18,7 @@ class ConfirmPaidBooking
     public function __construct(private BookingPaymentEligibility $eligibility) {}
 
     /**
-     * Called only by reconciliation while holding the Booking then Payment row locks.
+     * Called only by reconciliation while holding Centre, then Booking, then Payment row locks.
      */
     public function handle(Booking $booking, Payment $payment, CarbonInterface $paidAt): bool
     {

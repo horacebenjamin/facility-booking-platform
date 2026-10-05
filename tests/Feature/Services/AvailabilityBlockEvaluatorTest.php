@@ -22,7 +22,7 @@ class AvailabilityBlockEvaluatorTest extends TestCase
     {
         parent::setUp();
 
-        $this->evaluator = new AvailabilityBlockEvaluator;
+        $this->evaluator = app(AvailabilityBlockEvaluator::class);
     }
 
     public function test_resource_with_no_block_is_not_blocked(): void

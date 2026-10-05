@@ -261,6 +261,17 @@ class VenueDevelopmentSeeder extends Seeder
         $manager->syncRoles(['manager']);
         $manager->assignedCentres()->syncWithoutDetaching([$hillside->id, $riverside->id]);
 
+        $riversideManager = User::query()->updateOrCreate(
+            ['email' => 'riverside.manager@facility4hire.test'],
+            [
+                'name' => 'Fictional Riverside Manager',
+                'email_verified_at' => '2026-01-01 09:00:00',
+                'password' => 'password',
+            ],
+        );
+        $riversideManager->syncRoles(['manager']);
+        $riversideManager->assignedCentres()->sync([$riverside->id]);
+
         $leisureAssistant = User::query()->updateOrCreate(
             ['email' => 'assistant@facility4hire.test'],
             [
