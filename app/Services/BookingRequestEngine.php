@@ -91,6 +91,7 @@ class BookingRequestEngine
         CarbonImmutable $endsAt,
         CarbonImmutable $evaluatedAt,
         ?int $excludedBookingId = null,
+        ?PricingContext $pricingContext = null,
     ): BookingRequestValidation {
         $availability = $this->availabilityService->check(
             $context->resource,
@@ -108,6 +109,7 @@ class BookingRequestEngine
                 $startsAt,
                 $endsAt,
                 $context->equipmentRequirements,
+                $pricingContext,
             ));
         }
 
@@ -213,6 +215,7 @@ class BookingRequestEngine
         CarbonImmutable $evaluatedAt,
         ?BookingSeries $series = null,
         ?int $occurrenceIndex = null,
+        ?User $actor = null,
     ): Booking {
         $quote = $validation->pricing?->quote;
         $operationalPeriod = $validation->operationalPeriod;
@@ -265,8 +268,24 @@ class BookingRequestEngine
 
         $activity = activity('booking')
             ->performedOn($booking)
-            ->causedBy($customer)
-            ->event('booking.requested');
+            ->causedBy($actor ?? $customer)
+            ->event('booking.requested')
+            ->withProperties([
+                'booking_channel' => $actor === null ? 'customer_self_service' : 'staff_assisted',
+                'customer_id' => $customer->id,
+                'centre_id' => $booking->centre_id,
+                'facility_id' => $booking->facility_id,
+                'resource_id' => $booking->resource_id,
+                'calculated_total_minor' => $quote->calculatedTotalMinor,
+                'final_total_minor' => $quote->finalTotalMinor,
+                'price_override' => $quote->override === null ? null : [
+                    'original_total_minor' => $quote->override->originalTotalMinor,
+                    'adjusted_total_minor' => $quote->override->adjustedTotalMinor,
+                    'reason' => $quote->override->reason,
+                    'responsible_user_id' => $quote->override->responsibleUserId,
+                    'adjusted_at' => $quote->override->adjustedAt->toIso8601String(),
+                ],
+            ]);
 
         if ($series !== null && $occurrenceIndex !== null) {
             $activity->withProperties([

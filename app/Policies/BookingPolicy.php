@@ -57,6 +57,13 @@ class BookingPolicy
         return $user->can('bookings.view') && $user->assignedCentres()->exists();
     }
 
+    public function createManual(User $user): bool
+    {
+        return $user->hasRole('manager')
+            && $user->can('bookings.create')
+            && $user->assignedCentres()->exists();
+    }
+
     public function view(User $user, Booking $booking): bool
     {
         return $user->can('bookings.view') && $user->isAssignedToCentre($booking->centre);

@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\User;
 use App\Services\BookingRequestEngine;
 use App\Services\CentreReservationLock;
+use App\Services\PricingContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -26,13 +27,21 @@ class CreateBookingRequest
         CarbonImmutable $startsAt,
         CarbonImmutable $endsAt,
         array $equipmentSelections = [],
+        ?PricingContext $pricingContext = null,
+        ?User $actor = null,
     ): Booking {
         $centreId = $this->centreReservationLock->centreIdForResource($resourceId);
 
-        return DB::transaction(function () use ($centreId, $customer, $resourceId, $startsAt, $endsAt, $equipmentSelections): Booking {
+        return DB::transaction(function () use ($centreId, $customer, $resourceId, $startsAt, $endsAt, $equipmentSelections, $pricingContext, $actor): Booking {
             $context = $this->bookingRequestEngine->lockContext($resourceId, $equipmentSelections, $centreId);
             $evaluatedAt = CarbonImmutable::now(config('app.timezone'));
-            $validation = $this->bookingRequestEngine->validate($context, $startsAt, $endsAt, $evaluatedAt);
+            $validation = $this->bookingRequestEngine->validate(
+                $context,
+                $startsAt,
+                $endsAt,
+                $evaluatedAt,
+                pricingContext: $pricingContext,
+            );
 
             if (! $validation->canCreate()) {
                 throw new BookingSubmissionUnavailable;
@@ -46,6 +55,7 @@ class CreateBookingRequest
                 equipmentSelections: $equipmentSelections,
                 validation: $validation,
                 evaluatedAt: $evaluatedAt,
+                actor: $actor,
             );
         });
     }
