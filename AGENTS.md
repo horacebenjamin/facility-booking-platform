@@ -89,6 +89,33 @@ isolated behind the documented Laravel AI SDK boundary.
 Core booking, availability, pricing, payment, reporting and operational
 functionality must remain usable when an AI provider is unavailable.
 
+---
+
+# 3. Laravel Sail Execution
+
+This project runs inside WSL using Laravel Sail.
+
+When executing Sail commands, always invoke Sail explicitly through Bash:
+
+```bash
+bash ./vendor/bin/sail <command>
+```
+
+For example:
+
+```bash
+bash ./vendor/bin/sail artisan test --compact
+bash ./vendor/bin/sail bin pint --dirty --format agent
+bash ./vendor/bin/sail npm run build
+```
+
+Do not execute `vendor/bin/sail` directly. Doing so can cause Windows to open a
+"Select an app to open 'sail'" dialog instead of running the command.
+
+This rule overrides the command examples shown later in this file.
+Whenever later guidance shows `vendor/bin/sail <command>`, execute it as
+`bash ./vendor/bin/sail <command>` in this environment.
+
 ===
 
 <laravel-boost-guidelines>
