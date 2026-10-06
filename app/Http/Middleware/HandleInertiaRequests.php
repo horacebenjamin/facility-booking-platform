@@ -44,6 +44,9 @@ class HandleInertiaRequests extends Middleware
                 'workspace' => $request->user()?->workspace() ?? 'public',
                 'workspaceUrl' => $request->user()?->workspaceUrl() ?? route('home', absolute: false),
             ],
+            'flash' => [
+                'success' => $request->session()->get('success'),
+            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

@@ -90,6 +90,7 @@ class BookingRequestEngine
         CarbonImmutable $startsAt,
         CarbonImmutable $endsAt,
         CarbonImmutable $evaluatedAt,
+        ?int $excludedBookingId = null,
     ): BookingRequestValidation {
         $availability = $this->availabilityService->check(
             $context->resource,
@@ -97,6 +98,7 @@ class BookingRequestEngine
             $endsAt,
             $context->equipmentRequirements,
             $evaluatedAt,
+            $excludedBookingId,
         );
         $pricing = null;
 
@@ -119,6 +121,83 @@ class BookingRequestEngine
             ),
             hasAllocationUnits: ! $context->allocationUnits->isEmpty(),
         );
+    }
+
+    /**
+     * Replace an existing request's protected period and authoritative price snapshot.
+     * The caller must already hold the centre and booking locks.
+     *
+     * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
+     */
+    public function amend(
+        Booking $booking,
+        BookingRequestContext $context,
+        CarbonImmutable $startsAt,
+        CarbonImmutable $endsAt,
+        array $equipmentSelections,
+        BookingRequestValidation $validation,
+        CarbonImmutable $evaluatedAt,
+    ): Booking {
+        $quote = $validation->pricing?->quote;
+        $operationalPeriod = $validation->operationalPeriod;
+
+        if (! $validation->canCreate() || $quote === null || $operationalPeriod === null) {
+            throw new BookingSubmissionUnavailable('The amended booking details are no longer available.');
+        }
+
+        $booking->equipmentAllocations()->delete();
+
+        $snapshot = $booking->priceSnapshot()->first();
+        if ($snapshot !== null) {
+            $snapshot->lines()->delete();
+            $snapshot->delete();
+        }
+
+        $booking->equipmentRequests()->delete();
+
+        $occupancy = $booking->allocationOccupancy()->first();
+        if ($occupancy !== null) {
+            $occupancy->allocationUnits()->detach();
+            $occupancy->delete();
+        }
+
+        $booking->update([
+            'centre_id' => $context->resource->facility->centre_id,
+            'facility_id' => $context->resource->facility_id,
+            'resource_id' => $context->resource->id,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+        ]);
+
+        $bookingEquipment = $this->createBookingEquipment(
+            $booking,
+            $equipmentSelections,
+            $context->equipmentById,
+        );
+        $this->createSnapshot($booking, $quote, $bookingEquipment);
+
+        $expiresAt = $evaluatedAt->addHours((int) config('booking.provisional_hold_hours'));
+        $occupancy = AllocationOccupancy::query()->create([
+            'booking_id' => $booking->id,
+            'starts_at' => $operationalPeriod->startsAt,
+            'ends_at' => $operationalPeriod->endsAt,
+            'expires_at' => $expiresAt,
+        ]);
+        $occupancy->allocationUnits()->attach($context->allocationUnits->pluck('id')->all());
+
+        foreach ($bookingEquipment as $equipmentRequest) {
+            EquipmentAllocation::query()->create([
+                'booking_id' => $booking->id,
+                'booking_equipment_id' => $equipmentRequest->id,
+                'equipment_id' => $equipmentRequest->equipment_id,
+                'quantity' => $equipmentRequest->requested_quantity,
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'expires_at' => $expiresAt,
+            ]);
+        }
+
+        return $booking;
     }
 
     /**

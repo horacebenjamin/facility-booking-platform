@@ -36,6 +36,9 @@ Route::middleware(['auth', 'verified', EnsureCustomerRole::class])->group(functi
     Route::post('bookings/{booking}/payment', [BookingPaymentController::class, 'store'])
         ->middleware('throttle:10,1')->name('bookings.payment.store');
     Route::get('bookings/review', BookingReviewController::class)->name('bookings.review');
+    Route::get('bookings/{booking}', [CustomerBookingController::class, 'show'])->name('bookings.show');
+    Route::post('bookings/{booking}/cancel', [CustomerBookingController::class, 'cancel'])->name('bookings.cancel');
+    Route::patch('bookings/{booking}', [CustomerBookingController::class, 'amend'])->name('bookings.amend');
     Route::post('bookings', StoreBookingRequestController::class)->name('bookings.store');
     Route::post('bookings/recurring/preview', PreviewRecurringBookingRequestController::class)->name('bookings.recurring.preview');
     Route::post('bookings/recurring', StoreRecurringBookingRequestController::class)->name('bookings.recurring.store');

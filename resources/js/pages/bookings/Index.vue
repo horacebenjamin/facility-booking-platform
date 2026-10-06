@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { show as showBooking } from '@/routes/bookings';
 import { show as showPayment } from '@/routes/bookings/payment';
 import { index as invoiceIndex, show as showInvoice } from '@/routes/invoices';
 
@@ -8,15 +10,28 @@ defineProps<{
     bookings: {
         id: number;
         reference: string;
-        resource_name: string;
-        starts_at: string;
+        status: string;
         status_label: string;
+        resource_name: string;
+        facility_name: string;
+        centre_name: string;
+        starts_at: string;
         financial_status_label: string;
         billing_method: 'card' | 'invoice';
-        invoice_id: number | null;
-        invoice_reference: string | null;
+        invoice: { id: number; reference: string } | null;
+        is_recurring: boolean;
+        occurrence_index: number | null;
+        occurrence_count: number | null;
+        can_pay: boolean;
     }[];
 }>();
+
+function formatDate(value: string): string {
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(new Date(value));
+}
 </script>
 
 <template>
@@ -30,44 +45,68 @@ defineProps<{
                 >
                 <p class="text-sm text-muted-foreground">
                     Your latest 50 booking occurrences. Payment is available
-                    after approval.
+                    after approval where required.
                 </p>
                 <p v-if="bookings.length === 0">
                     You have no booking requests yet.
                 </p>
-                <ul class="space-y-4">
+                <ul v-else class="space-y-4">
                     <li
                         v-for="booking in bookings"
                         :key="booking.id"
-                        class="space-y-2 border-b pb-4"
+                        class="space-y-3 border-b pb-4 last:border-b-0"
                     >
-                        <Link
-                            v-if="booking.billing_method !== 'invoice'"
-                            :href="showPayment(booking.id)"
-                            class="font-medium underline"
-                            >{{ booking.reference }} —
-                            {{ booking.resource_name }}</Link
+                        <div
+                            class="flex flex-wrap items-start justify-between gap-3"
                         >
-                        <p v-else class="font-medium">
-                            {{ booking.reference }} —
-                            {{ booking.resource_name }}
-                        </p>
+                            <div class="space-y-1">
+                                <Link
+                                    :href="showBooking(booking.id)"
+                                    class="font-medium underline-offset-4 hover:underline"
+                                >
+                                    {{ booking.reference }} —
+                                    {{ booking.resource_name }}
+                                </Link>
+                                <p class="text-sm text-muted-foreground">
+                                    {{ booking.facility_name }} ·
+                                    {{ booking.centre_name }}
+                                </p>
+                            </div>
+                            <Badge variant="secondary">{{
+                                booking.status_label
+                            }}</Badge>
+                        </div>
                         <p class="text-sm">
-                            {{ booking.status_label }} ·
+                            {{ formatDate(booking.starts_at) }} ·
                             {{ booking.financial_status_label }}
                         </p>
-                        <template v-if="booking.billing_method === 'invoice'">
+                        <p
+                            v-if="booking.is_recurring"
+                            class="text-sm text-muted-foreground"
+                        >
+                            Recurring booking · occurrence
+                            {{ booking.occurrence_index }} of
+                            {{ booking.occurrence_count }}
+                        </p>
+                        <div class="flex flex-wrap gap-3 text-sm">
                             <Link
-                                v-if="booking.invoice_id !== null"
-                                :href="showInvoice(booking.invoice_id)"
-                                class="text-sm underline"
-                                >Invoice {{ booking.invoice_reference }}</Link
+                                :href="showBooking(booking.id)"
+                                class="underline"
+                                >View details</Link
                             >
-                            <p v-else class="text-sm text-muted-foreground">
-                                Confirmed under invoice terms. Your invoice will
-                                be issued by the centre.
-                            </p>
-                        </template>
+                            <Link
+                                v-if="booking.can_pay"
+                                :href="showPayment(booking.id)"
+                                class="font-medium underline"
+                                >Make payment</Link
+                            >
+                            <Link
+                                v-if="booking.invoice !== null"
+                                :href="showInvoice(booking.invoice.id)"
+                                class="underline"
+                                >Invoice {{ booking.invoice.reference }}</Link
+                            >
+                        </div>
                     </li>
                 </ul>
             </CardContent>

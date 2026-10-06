@@ -26,6 +26,27 @@ class BookingPolicy
         return $user->can('bookings.view') && $user->id === $booking->customer_id;
     }
 
+    public function viewCustomer(User $user, Booking $booking): bool
+    {
+        return $user->hasRole('customer')
+            && $user->can('bookings.view')
+            && $user->id === $booking->customer_id;
+    }
+
+    public function cancel(User $user, Booking $booking): bool
+    {
+        return $user->hasRole('customer')
+            && $user->can('bookings.cancel')
+            && $user->id === $booking->customer_id;
+    }
+
+    public function amend(User $user, Booking $booking): bool
+    {
+        return $user->hasRole('customer')
+            && $user->can('bookings.amend')
+            && $user->id === $booking->customer_id;
+    }
+
     public function pay(User $user, Booking $booking): bool
     {
         return $user->can('payments.initiate') && $user->id === $booking->customer_id;
