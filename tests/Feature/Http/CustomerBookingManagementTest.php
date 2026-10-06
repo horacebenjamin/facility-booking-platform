@@ -127,9 +127,12 @@ class CustomerBookingManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('bookings/Show')
                 ->where('booking.id', $booking->id)
+                ->where('booking.starts_at', '2026-10-05T18:00:00+00:00')
+                ->where('booking.ends_at', '2026-10-05T19:00:00+00:00')
                 ->where('booking.is_recurring', true)
                 ->where('booking.recurring.occurrence_count', 4)
                 ->has('booking.recurring.occurrences', 2)
+                ->where('booking.recurring.occurrences.0.starts_at', '2026-10-05T18:00:00+00:00')
                 ->has('booking.history', 1)
                 ->where('booking.history.0.title', 'Booking request submitted')
                 ->missing('booking.history.0.staff_note')

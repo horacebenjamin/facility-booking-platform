@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { index as bookingIndex } from '@/routes/bookings';
 import { store as initiatePayment } from '@/routes/bookings/payment';
 import type { PaymentBooking, PaymentSummary } from '@/types/payment';
+import { formatBookingDateTime } from '@/lib/bookingDateTime';
 
 const props = defineProps<{
     booking: PaymentBooking;
@@ -16,14 +17,6 @@ const form = useForm<{ payment?: string }>({});
 
 function pay() {
     form.post(initiatePayment.url(props.booking.id));
-}
-
-function formatDate(value: string) {
-    return new Intl.DateTimeFormat('en-GB', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-        timeZone: 'Europe/London',
-    }).format(new Date(value));
 }
 
 function formatAmount() {
@@ -68,11 +61,11 @@ function formatAmount() {
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Starts</dt>
-                        <dd>{{ formatDate(booking.starts_at) }}</dd>
+                        <dd>{{ formatBookingDateTime(booking.starts_at) }}</dd>
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Ends</dt>
-                        <dd>{{ formatDate(booking.ends_at) }}</dd>
+                        <dd>{{ formatBookingDateTime(booking.ends_at) }}</dd>
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Booking total</dt>
@@ -82,7 +75,9 @@ function formatAmount() {
                     </div>
                     <div v-if="booking.payment_due_at">
                         <dt class="text-muted-foreground">Payment deadline</dt>
-                        <dd>{{ formatDate(booking.payment_due_at) }}</dd>
+                        <dd>
+                            {{ formatBookingDateTime(booking.payment_due_at) }}
+                        </dd>
                     </div>
                 </dl>
                 <BookingPaymentStatus

@@ -17,6 +17,7 @@ import {
 } from '@/routes/bookings';
 import { show as showInvoice } from '@/routes/invoices';
 import { show as showPayment } from '@/routes/bookings/payment';
+import { formatBookingDateTime } from '@/lib/bookingDateTime';
 
 type HistoryEntry = {
     title: string;
@@ -68,13 +69,6 @@ const props = defineProps<{
 }>();
 
 const page = usePage<{ flash?: { success?: string } }>();
-
-function formatDate(value: string): string {
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
 
 function localInput(value: string): string {
     return value.slice(0, 16);
@@ -131,11 +125,13 @@ function localInput(value: string): string {
                         </div>
                         <div>
                             <p class="text-muted-foreground">Starts</p>
-                            <p>{{ formatDate(booking.starts_at) }}</p>
+                            <p>
+                                {{ formatBookingDateTime(booking.starts_at) }}
+                            </p>
                         </div>
                         <div>
                             <p class="text-muted-foreground">Ends</p>
-                            <p>{{ formatDate(booking.ends_at) }}</p>
+                            <p>{{ formatBookingDateTime(booking.ends_at) }}</p>
                         </div>
                         <div>
                             <p class="text-muted-foreground">Financial state</p>
@@ -148,7 +144,13 @@ function localInput(value: string): string {
                             <p class="text-muted-foreground">
                                 Payment deadline
                             </p>
-                            <p>{{ formatDate(booking.payment_due_at) }}</p>
+                            <p>
+                                {{
+                                    formatBookingDateTime(
+                                        booking.payment_due_at,
+                                    )
+                                }}
+                            </p>
                         </div>
                         <p
                             v-if="booking.financial_message"
@@ -187,7 +189,11 @@ function localInput(value: string): string {
                             >
                                 <span
                                     >{{ occurrence.occurrence_index }} ·
-                                    {{ formatDate(occurrence.starts_at) }}</span
+                                    {{
+                                        formatBookingDateTime(
+                                            occurrence.starts_at,
+                                        )
+                                    }}</span
                                 >
                                 <span class="text-muted-foreground">{{
                                     occurrence.status_label
@@ -226,7 +232,9 @@ function localInput(value: string): string {
                                 <time
                                     class="text-xs text-muted-foreground"
                                     :datetime="entry.occurred_at"
-                                    >{{ formatDate(entry.occurred_at) }}</time
+                                    >{{
+                                        formatBookingDateTime(entry.occurred_at)
+                                    }}</time
                                 >
                             </li>
                         </ol>

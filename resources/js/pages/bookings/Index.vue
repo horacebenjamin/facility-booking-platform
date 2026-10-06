@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { show as showBooking } from '@/routes/bookings';
 import { show as showPayment } from '@/routes/bookings/payment';
 import { index as invoiceIndex, show as showInvoice } from '@/routes/invoices';
+import { formatBookingDateTime } from '@/lib/bookingDateTime';
 
 defineProps<{
     bookings: {
@@ -25,13 +26,6 @@ defineProps<{
         can_pay: boolean;
     }[];
 }>();
-
-function formatDate(value: string): string {
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
 </script>
 
 <template>
@@ -77,7 +71,7 @@ function formatDate(value: string): string {
                             }}</Badge>
                         </div>
                         <p class="text-sm">
-                            {{ formatDate(booking.starts_at) }} ·
+                            {{ formatBookingDateTime(booking.starts_at) }} ·
                             {{ booking.financial_status_label }}
                         </p>
                         <p
