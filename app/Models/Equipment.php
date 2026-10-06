@@ -48,6 +48,12 @@ class Equipment extends Model
         return $this->hasMany(EquipmentAllocation::class);
     }
 
+    /** @return HasMany<DamageReport, $this> */
+    public function damageReports(): HasMany
+    {
+        return $this->hasMany(DamageReport::class);
+    }
+
     /**
      * @return HasMany<EquipmentRate, $this>
      */

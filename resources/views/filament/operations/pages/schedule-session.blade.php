@@ -46,4 +46,10 @@
             @endif
         </div>
     @endif
+    @if (auth()->user()?->can('incidents.manage'))
+        <div class="today-schedule-actions" role="group" aria-label="Operational issue actions for {{ $session->reference }}">
+            <x-filament::button color="gray" wire:click="mountAction('reportIncident', { booking: {{ $session->bookingId }} })">Report incident</x-filament::button>
+            <x-filament::button color="gray" wire:click="mountAction('reportDamage', { booking: {{ $session->bookingId }} })">Report damage</x-filament::button>
+        </div>
+    @endif
 </li>

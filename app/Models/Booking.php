@@ -128,6 +128,18 @@ class Booking extends Model
         return $this->hasMany(EquipmentAllocation::class);
     }
 
+    /** @return HasMany<Incident, $this> */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(Incident::class);
+    }
+
+    /** @return HasMany<DamageReport, $this> */
+    public function damageReports(): HasMany
+    {
+        return $this->hasMany(DamageReport::class);
+    }
+
     /**
      * @return MorphMany<Activity, $this>
      */

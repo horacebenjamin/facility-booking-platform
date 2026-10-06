@@ -66,6 +66,18 @@ class Centre extends Model
         return $this->hasMany(Booking::class);
     }
 
+    /** @return HasMany<Incident, $this> */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(Incident::class);
+    }
+
+    /** @return HasMany<DamageReport, $this> */
+    public function damageReports(): HasMany
+    {
+        return $this->hasMany(DamageReport::class);
+    }
+
     /**
      * @return BelongsToMany<User, $this>
      */

@@ -110,6 +110,18 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, Pas
         return $this->hasMany(CustomerInvoiceTerms::class, 'customer_id');
     }
 
+    /** @return HasMany<Incident, $this> */
+    public function reportedIncidents(): HasMany
+    {
+        return $this->hasMany(Incident::class, 'reported_by');
+    }
+
+    /** @return HasMany<DamageReport, $this> */
+    public function reportedDamageReports(): HasMany
+    {
+        return $this->hasMany(DamageReport::class, 'reported_by');
+    }
+
     public function isAssignedToCentre(Centre $centre): bool
     {
         return $this->assignedCentres()
