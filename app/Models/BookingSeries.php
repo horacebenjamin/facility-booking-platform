@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $identifier
  * @property int $customer_id
+ * @property int|null $organisation_id
  * @property int $centre_id
  * @property int $facility_id
  * @property int $resource_id
@@ -24,10 +25,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $timezone
  * @property CarbonInterface $first_starts_at
  * @property CarbonInterface $first_ends_at
+ * @property-read Organisation|null $organisation
  */
 #[Fillable([
     'identifier',
     'customer_id',
+    'organisation_id',
     'centre_id',
     'facility_id',
     'resource_id',
@@ -49,6 +52,12 @@ class BookingSeries extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    /** @return BelongsTo<Organisation, $this> */
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class);
     }
 
     /**

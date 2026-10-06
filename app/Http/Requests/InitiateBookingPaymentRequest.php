@@ -11,7 +11,7 @@ class InitiateBookingPaymentRequest extends FormRequest
     {
         $booking = $this->route('booking');
 
-        abort_unless($booking instanceof Booking && $this->user()?->id === $booking->customer_id, 404);
+        abort_unless($booking instanceof Booking && $this->user()?->can('viewPayment', $booking), 404);
 
         return $this->user()->can('pay', $booking);
     }

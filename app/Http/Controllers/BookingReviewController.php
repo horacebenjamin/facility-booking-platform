@@ -7,6 +7,7 @@ use App\Models\Equipment;
 use App\Models\Resource;
 use App\Models\User;
 use App\Services\EquipmentRequirement;
+use App\Services\OrganisationBookingContext;
 use App\Services\PricingRequest;
 use App\Services\PricingService;
 use App\Services\RecurrencePattern;
@@ -17,8 +18,11 @@ use Inertia\Response;
 
 class BookingReviewController extends Controller
 {
-    public function __invoke(ShowBookingReviewRequest $request, PricingService $pricingService): Response|RedirectResponse
-    {
+    public function __invoke(
+        ShowBookingReviewRequest $request,
+        PricingService $pricingService,
+        OrganisationBookingContext $organisationContext,
+    ): Response|RedirectResponse {
         /** @var array{resource_id: int, starts_at: string, ends_at: string, equipment?: list<array{equipment_id: int, quantity: int}>} $validated */
         $validated = $request->validated();
         $resource = Resource::query()
@@ -83,6 +87,12 @@ class BookingReviewController extends Controller
                 'name' => $customer->name,
                 'email' => $customer->email,
             ],
+            'bookingContexts' => $organisationContext->bookableMemberships($customer)
+                ->map(fn ($membership): array => [
+                    'organisation_id' => $membership->organisation_id,
+                    'name' => $membership->organisation->name,
+                    'role_label' => $membership->role->label(),
+                ])->values(),
             'recurrence' => [
                 'timezone' => config('booking.recurrence_timezone'),
                 'minimum_interval_weeks' => 1,

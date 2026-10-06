@@ -25,6 +25,7 @@ class BookingSeriesFactory extends Factory
         return [
             'identifier' => (string) Str::uuid(),
             'customer_id' => User::factory(),
+            'organisation_id' => null,
             'resource_id' => Resource::factory(),
             'facility_id' => static function (array $attributes): int {
                 return Resource::query()->whereKey($attributes['resource_id'])->sole()->facility_id;

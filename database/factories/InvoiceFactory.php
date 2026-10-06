@@ -13,6 +13,6 @@ class InvoiceFactory extends Factory
     /** @return array<string, mixed> */
     public function definition(): array
     {
-        return ['reference' => 'INV-'.fake()->uuid(), 'customer_id' => User::factory(), 'issued_by' => User::factory(), 'issue_date' => now()->toDateString(), 'due_date' => now()->addDays(30)->toDateString(), 'status' => InvoiceStatus::Issued, 'currency' => 'GBP', 'total_minor' => 5000];
+        return ['reference' => 'INV-'.fake()->uuid(), 'customer_id' => User::factory(), 'organisation_id' => null, 'issued_by' => User::factory(), 'issue_date' => now()->toDateString(), 'due_date' => now()->addDays(30)->toDateString(), 'status' => InvoiceStatus::Issued, 'currency' => 'GBP', 'total_minor' => 5000];
     }
 }

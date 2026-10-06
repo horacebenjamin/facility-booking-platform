@@ -23,6 +23,7 @@ import {
     recurringBookingSubmissionPayload,
     sendRecurringBookingPreview,
     sendRecurringBookingRequest,
+    withBookingOrganisation,
 } from '@/lib/booking';
 import type {
     BookingReviewSelection,
@@ -35,6 +36,7 @@ import type {
 const props = defineProps<{
     selection: BookingReviewSelection;
     recurrence: RecurrenceConstraints;
+    organisationId?: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -114,13 +116,24 @@ function validateInputs(): boolean {
 }
 
 function selectionPayload(): RecurringBookingSelectionPayload {
-    return recurringBookingSelectionPayload(
-        props.selection,
-        intervalWeeks.value,
-        occurrenceCount.value,
-        props.recurrence.timezone,
+    return withBookingOrganisation(
+        recurringBookingSelectionPayload(
+            props.selection,
+            intervalWeeks.value,
+            occurrenceCount.value,
+            props.recurrence.timezone,
+        ),
+        props.organisationId ?? null,
     );
 }
+
+watch(
+    () => props.organisationId,
+    () => {
+        preview.value = null;
+        acceptedAvailableOccurrences.value = false;
+    },
+);
 
 async function previewOccurrences(): Promise<void> {
     if (!validateInputs() || isPreviewing.value || isSubmitting.value) {
@@ -284,8 +297,8 @@ watch([intervalWeeks, occurrenceCount], () => {
                 </div>
 
                 <p class="text-sm text-muted-foreground">
-                    Times use {{ recurrence.timezone }}. Availability and prices
-                    are calculated by Facility4Hire for every booking.
+                    Availability and prices are calculated by Facility4Hire for
+                    every booking.
                 </p>
 
                 <Button

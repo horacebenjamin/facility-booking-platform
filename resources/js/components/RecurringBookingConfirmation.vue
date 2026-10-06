@@ -63,6 +63,27 @@ function formatDateTime(dateTime: string): string {
                         {{ confirmation.status_label }}
                     </Badge>
                 </div>
+                <div v-if="confirmation.organisation_name" class="text-sm">
+                    <p class="text-muted-foreground">Organisation</p>
+                    <p class="font-medium">
+                        {{ confirmation.organisation_name }}
+                    </p>
+                    <p
+                        v-if="confirmation.booked_by_name"
+                        class="text-muted-foreground"
+                    >
+                        Booked by {{ confirmation.booked_by_name }}
+                    </p>
+                </div>
+                <p
+                    v-else-if="confirmation.booked_by_name"
+                    class="text-sm text-muted-foreground"
+                >
+                    Booking for:
+                    <span class="font-medium text-foreground">{{
+                        confirmation.booked_by_name
+                    }}</span>
+                </p>
                 <p class="text-sm leading-6 text-muted-foreground">
                     Each booking is a separate request and still requires
                     management review. A decision on one occurrence does not
@@ -74,9 +95,6 @@ function formatDateTime(dateTime: string): string {
         <Card>
             <CardHeader>
                 <CardTitle>Submitted occurrences</CardTitle>
-                <CardDescription>
-                    Times use {{ confirmation.timezone }}.
-                </CardDescription>
             </CardHeader>
             <CardContent>
                 <ol class="divide-y">

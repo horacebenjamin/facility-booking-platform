@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\Organisation;
 use App\Models\User;
 use App\Services\BookingRequestEngine;
 use App\Services\BookingSeriesValidationResult;
@@ -10,6 +11,7 @@ use App\Services\RecurrenceGenerator;
 use App\Services\RecurrencePattern;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Gate;
 
 class PreviewRecurringBookingRequest
 {
@@ -29,9 +31,14 @@ class PreviewRecurringBookingRequest
         CarbonImmutable $firstEndsAt,
         RecurrencePattern $pattern,
         array $equipmentSelections = [],
+        ?Organisation $organisation = null,
     ): BookingSeriesValidationResult {
         if (! $customer->can('bookings.create')) {
             throw new AuthorizationException;
+        }
+
+        if ($organisation !== null) {
+            Gate::forUser($customer)->authorize('createBooking', $organisation);
         }
 
         $periods = $this->recurrenceGenerator->generate($firstStartsAt, $firstEndsAt, $pattern);

@@ -17,6 +17,7 @@ use Spatie\Activitylog\Models\Activity;
  * @property int $id
  * @property string $reference
  * @property int $customer_id
+ * @property int|null $organisation_id
  * @property int $issued_by
  * @property CarbonInterface $issue_date
  * @property CarbonInterface $due_date
@@ -24,8 +25,9 @@ use Spatie\Activitylog\Models\Activity;
  * @property string $currency
  * @property int $total_minor
  * @property CarbonInterface|null $paid_at
+ * @property-read Organisation|null $organisation
  */
-#[Fillable(['reference', 'customer_id', 'issued_by', 'issue_date', 'due_date', 'status', 'currency', 'total_minor', 'paid_at'])]
+#[Fillable(['reference', 'customer_id', 'organisation_id', 'issued_by', 'issue_date', 'due_date', 'status', 'currency', 'total_minor', 'paid_at'])]
 class Invoice extends Model
 {
     /** @use HasFactory<InvoiceFactory> */
@@ -35,6 +37,12 @@ class Invoice extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    /** @return BelongsTo<Organisation, $this> */
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class);
     }
 
     /** @return HasMany<InvoiceLine, $this> */

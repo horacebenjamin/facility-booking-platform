@@ -109,6 +109,8 @@ class AmendBooking
                 ->event('booking.amended')
                 ->withProperties([
                     'scope' => $scope,
+                    'organisation_id' => $amended->organisation_id,
+                    'actor_organisation_role' => $amended->organisation?->membershipFor($actor)?->role->value,
                     'before' => $original,
                     'after' => [
                         'resource_id' => $amended->resource_id,

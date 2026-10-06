@@ -152,6 +152,15 @@ export function bookingSubmissionPayload(
     };
 }
 
+export function withBookingOrganisation<T extends BookingSelectionPayload>(
+    payload: T,
+    organisationId: number | null,
+): T {
+    return organisationId === null
+        ? payload
+        : { ...payload, organisation_id: organisationId };
+}
+
 export function canStartBookingSubmission(
     isSubmitting: boolean,
     hasSucceeded: boolean,

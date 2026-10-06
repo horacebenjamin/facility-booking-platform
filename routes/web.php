@@ -7,6 +7,8 @@ use App\Http\Controllers\CheckAvailabilityController;
 use App\Http\Controllers\CustomerBookingController;
 use App\Http\Controllers\CustomerInvoiceController;
 use App\Http\Controllers\CustomerNotificationController;
+use App\Http\Controllers\OrganisationController;
+use App\Http\Controllers\OrganisationMembershipController;
 use App\Http\Controllers\PreviewRecurringBookingRequestController;
 use App\Http\Controllers\QuotePricingController;
 use App\Http\Controllers\StoreBookingRequestController;
@@ -27,6 +29,12 @@ Route::post('payments/stripe/webhook', StripeWebhookController::class)
 Route::inertia('dashboard', 'Dashboard')->middleware(['auth', 'verified', EnsureCustomerRole::class.':redirect'])->name('dashboard');
 
 Route::middleware(['auth', 'verified', EnsureCustomerRole::class])->group(function () {
+    Route::get('organisations', [OrganisationController::class, 'index'])->name('organisations.index');
+    Route::post('organisations', [OrganisationController::class, 'store'])->name('organisations.store');
+    Route::get('organisations/{organisation}', [OrganisationController::class, 'show'])->name('organisations.show');
+    Route::post('organisations/{organisation}/memberships', [OrganisationMembershipController::class, 'store'])->name('organisations.memberships.store');
+    Route::patch('organisations/{organisation}/memberships/{membership}', [OrganisationMembershipController::class, 'update'])->name('organisations.memberships.update');
+    Route::delete('organisations/{organisation}/memberships/{membership}', [OrganisationMembershipController::class, 'destroy'])->name('organisations.memberships.destroy');
     Route::get('notifications', [CustomerNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [CustomerNotificationController::class, 'read'])->name('notifications.read');
     Route::get('invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');

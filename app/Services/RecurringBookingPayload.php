@@ -129,6 +129,8 @@ class RecurringBookingPayload
             'first_date' => $this->date($firstOccurrence['starts_at']),
             'last_date' => $this->date($lastOccurrence['starts_at']),
             'timezone' => $timezone,
+            'organisation_name' => $series->organisation?->name,
+            'booked_by_name' => $series->customer->name,
             'occurrences' => $occurrences,
         ];
     }

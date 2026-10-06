@@ -23,33 +23,33 @@ class BookingPolicy
 
     public function viewPayment(User $user, Booking $booking): bool
     {
-        return $user->can('bookings.view') && $user->id === $booking->customer_id;
+        return $user->can('bookings.view') && $this->canManageFinance($user, $booking);
     }
 
     public function viewCustomer(User $user, Booking $booking): bool
     {
         return $user->hasRole('customer')
             && $user->can('bookings.view')
-            && $user->id === $booking->customer_id;
+            && $this->canViewForCustomer($user, $booking);
     }
 
     public function cancel(User $user, Booking $booking): bool
     {
         return $user->hasRole('customer')
             && $user->can('bookings.cancel')
-            && $user->id === $booking->customer_id;
+            && $this->canManageForCustomer($user, $booking);
     }
 
     public function amend(User $user, Booking $booking): bool
     {
         return $user->hasRole('customer')
             && $user->can('bookings.amend')
-            && $user->id === $booking->customer_id;
+            && $this->canManageForCustomer($user, $booking);
     }
 
     public function pay(User $user, Booking $booking): bool
     {
-        return $user->can('payments.initiate') && $user->id === $booking->customer_id;
+        return $user->can('payments.initiate') && $this->canManageFinance($user, $booking);
     }
 
     public function viewAny(User $user): bool
@@ -77,5 +77,32 @@ class BookingPolicy
     public function reject(User $user, Booking $booking): bool
     {
         return $user->can('bookings.approve') && $user->isAssignedToCentre($booking->centre);
+    }
+
+    private function canViewForCustomer(User $user, Booking $booking): bool
+    {
+        if ($booking->organisation_id === null) {
+            return $user->id === $booking->customer_id;
+        }
+
+        return $booking->organisation?->membershipFor($user)?->role->canViewBookings() === true;
+    }
+
+    private function canManageForCustomer(User $user, Booking $booking): bool
+    {
+        if ($booking->organisation_id === null) {
+            return $user->id === $booking->customer_id;
+        }
+
+        return $booking->organisation?->membershipFor($user)?->role->canManageBookings() === true;
+    }
+
+    private function canManageFinance(User $user, Booking $booking): bool
+    {
+        if ($booking->organisation_id === null) {
+            return $user->id === $booking->customer_id;
+        }
+
+        return $booking->organisation?->membershipFor($user)?->role->canManageFinance() === true;
     }
 }

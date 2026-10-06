@@ -20,7 +20,13 @@ class CustomerBookingPresenter
     {
         $evaluatedAt = CarbonImmutable::now(config('app.timezone'));
         $status = $this->status($booking, $evaluatedAt);
-        $invoice = $booking->invoiceLines->first()?->invoice;
+        $invoice = $booking->invoiceLines
+            ->map->invoice
+            ->first(fn ($invoice): bool => $invoice !== null && $customer->can('viewCustomer', $invoice));
+        $canCancel = $customer->can('cancel', $booking)
+            && $this->managementPolicy->cancellationUnavailableReason($booking, $evaluatedAt) === null;
+        $canAmend = $customer->can('amend', $booking)
+            && $this->managementPolicy->amendmentUnavailableReason($booking, $evaluatedAt) === null;
 
         return [
             'id' => $booking->id,
@@ -33,6 +39,9 @@ class CustomerBookingPresenter
             'resource_name' => $booking->resource->name,
             'facility_name' => $booking->facility->name,
             'centre_name' => $booking->centre->name,
+            'owner_type' => $booking->organisation_id === null ? 'individual' : 'organisation',
+            'owner_name' => $booking->organisation->name ?? $booking->customer->name,
+            'booked_by_name' => $booking->customer->name,
             'starts_at' => $booking->starts_at->toIso8601String(),
             'ends_at' => $booking->ends_at->toIso8601String(),
             'payment_due_at' => $booking->payment_due_at?->toIso8601String(),
@@ -45,11 +54,20 @@ class CustomerBookingPresenter
             'occurrence_count' => $booking->series?->occurrence_count,
             'can_pay' => $status['value'] === 'awaiting_payment'
                 && $booking->billing_method === BillingMethod::Card
-                && $booking->payment_due_at?->isFuture() === true,
-            'can_cancel' => $this->managementPolicy->cancellationUnavailableReason($booking, $evaluatedAt) === null,
-            'cancellation_unavailable_reason' => $this->managementPolicy->cancellationUnavailableReason($booking, $evaluatedAt),
-            'can_amend' => $this->managementPolicy->amendmentUnavailableReason($booking, $evaluatedAt) === null,
-            'amendment_unavailable_reason' => $this->managementPolicy->amendmentUnavailableReason($booking, $evaluatedAt),
+                && $booking->payment_due_at?->isFuture() === true
+                && $customer->can('pay', $booking),
+            'can_cancel' => $canCancel,
+            'cancellation_unavailable_reason' => $canCancel
+                ? null
+                : ($customer->can('cancel', $booking)
+                    ? $this->managementPolicy->cancellationUnavailableReason($booking, $evaluatedAt)
+                    : 'Your organisation role does not allow cancellation.'),
+            'can_amend' => $canAmend,
+            'amendment_unavailable_reason' => $canAmend
+                ? null
+                : ($customer->can('amend', $booking)
+                    ? $this->managementPolicy->amendmentUnavailableReason($booking, $evaluatedAt)
+                    : 'Your organisation role does not allow amendments.'),
         ];
     }
 
@@ -175,7 +193,7 @@ class CustomerBookingPresenter
             'occurrence_index' => $booking->occurrence_index,
             'occurrence_count' => $booking->series->occurrence_count,
             'occurrences' => $booking->series->bookings
-                ->filter(fn (Booking $occurrence): bool => $occurrence->customer_id === $customer->id)
+                ->filter(fn (Booking $occurrence): bool => $customer->can('viewCustomer', $occurrence))
                 ->map(function (Booking $occurrence): array {
                     $status = $this->status($occurrence, CarbonImmutable::now(config('app.timezone')));
 

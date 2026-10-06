@@ -7,6 +7,7 @@ use App\Enums\RecurrenceFrequency;
 use App\Exceptions\BookingSubmissionUnavailable;
 use App\Http\Requests\RecurringBookingPreviewRequest;
 use App\Models\User;
+use App\Services\OrganisationBookingContext;
 use App\Services\RecurrencePattern;
 use App\Services\RecurringBookingPayload;
 use Carbon\CarbonImmutable;
@@ -18,12 +19,14 @@ class PreviewRecurringBookingRequestController extends Controller
         RecurringBookingPreviewRequest $request,
         PreviewRecurringBookingRequest $previewRecurringBookingRequest,
         RecurringBookingPayload $payload,
+        OrganisationBookingContext $organisationContext,
     ): JsonResponse {
-        /** @var array{resource_id: int, starts_at: string, ends_at: string, interval_weeks: int, occurrence_count: int, timezone: string, equipment?: list<array{equipment_id: int, quantity: int}>} $validated */
+        /** @var array{resource_id: int, starts_at: string, ends_at: string, interval_weeks: int, occurrence_count: int, timezone: string, equipment?: list<array{equipment_id: int, quantity: int}>, organisation_id?: int|null} $validated */
         $validated = $request->validated();
         $pattern = $this->pattern($validated);
         /** @var User $customer */
         $customer = $request->user();
+        $organisation = $organisationContext->resolveBookable($customer, $validated['organisation_id'] ?? null);
 
         try {
             $validation = $previewRecurringBookingRequest->handle(
@@ -33,6 +36,7 @@ class PreviewRecurringBookingRequestController extends Controller
                 $this->parseDateTime($validated['ends_at'], $validated['timezone']),
                 $pattern,
                 $validated['equipment'] ?? [],
+                organisation: $organisation,
             );
         } catch (BookingSubmissionUnavailable) {
             return response()->json([

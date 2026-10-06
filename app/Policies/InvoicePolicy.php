@@ -20,7 +20,15 @@ class InvoicePolicy
 
     public function viewCustomer(User $user, Invoice $invoice): bool
     {
-        return $user->can('bookings.view') && $user->id === $invoice->customer_id;
+        if (! $user->hasRole('customer') || ! $user->can('bookings.view')) {
+            return false;
+        }
+
+        if ($invoice->organisation_id === null) {
+            return $user->id === $invoice->customer_id;
+        }
+
+        return $invoice->organisation?->membershipFor($user)?->role->canManageFinance() === true;
     }
 
     public function create(User $user): bool

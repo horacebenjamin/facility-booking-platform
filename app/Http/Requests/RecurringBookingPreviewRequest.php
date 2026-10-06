@@ -40,6 +40,8 @@ class RecurringBookingPreviewRequest extends FormRequest
             'equipment' => ['sometimes', 'array'],
             'equipment.*.equipment_id' => ['required', 'integer', 'distinct:strict', 'exists:equipment,id'],
             'equipment.*.quantity' => ['required', 'integer', 'min:1'],
+            'organisation_id' => ['nullable', 'integer', 'min:1'],
+            'organization_id' => ['prohibited'],
             'amount_minor' => ['prohibited'],
             'billing_method' => ['prohibited'],
             'invoice_term_days' => ['prohibited'],

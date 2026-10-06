@@ -1,6 +1,8 @@
 export interface InvoiceSummary {
     id: number;
     reference: string;
+    owner_type: 'individual' | 'organisation';
+    owner_name: string;
     issue_date: string;
     due_date: string;
     status: 'issued' | 'paid';

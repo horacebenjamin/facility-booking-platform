@@ -27,6 +27,7 @@ class BookingFactory extends Factory
         return [
             'reference' => 'BKG-'.fake()->unique()->numerify('########'),
             'customer_id' => User::factory(),
+            'organisation_id' => null,
             'resource_id' => Resource::factory(),
             'facility_id' => static function (array $attributes): int {
                 return Resource::query()->whereKey($attributes['resource_id'])->sole()->facility_id;

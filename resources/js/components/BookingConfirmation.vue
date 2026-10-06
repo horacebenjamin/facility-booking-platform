@@ -56,6 +56,25 @@ defineProps<{
                         {{ booking.status_label }}
                     </Badge>
                 </div>
+                <div v-if="booking.organisation_name" class="text-sm">
+                    <p class="text-muted-foreground">Organisation</p>
+                    <p class="font-medium">{{ booking.organisation_name }}</p>
+                    <p
+                        v-if="booking.booked_by_name"
+                        class="text-muted-foreground"
+                    >
+                        Booked by {{ booking.booked_by_name }}
+                    </p>
+                </div>
+                <p
+                    v-else-if="booking.booked_by_name"
+                    class="text-sm text-muted-foreground"
+                >
+                    Booking for:
+                    <span class="font-medium text-foreground">{{
+                        booking.booked_by_name
+                    }}</span>
+                </p>
                 <p class="text-sm leading-6 text-muted-foreground">
                     A provisional reservation is protecting this time while the
                     request is reviewed. Management will review the request and

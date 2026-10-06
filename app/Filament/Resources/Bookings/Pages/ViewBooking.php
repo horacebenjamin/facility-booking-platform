@@ -54,7 +54,8 @@ class ViewBooking extends ViewRecord
                     Toggle::make('enabled')->label('Authorise invoice billing at this centre'),
                     TextInput::make('term_days')->label('Payment terms (days)')->integer()->required()->minValue(1)->maxValue(365),
                 ])
-                ->modalDescription('These terms apply to this customer at this centre when future booking requests are approved. Existing approved arrangements remain unchanged.')
+                ->modalDescription(fn (): string => ($this->booking()->organisation_id === null ? 'These terms apply to this customer' : 'These terms apply to the responsible organisation')
+                    .' at this centre when future booking requests are approved. Existing approved arrangements remain unchanged.')
                 ->action(function (array $data): void {
                     try {
                         app(SetCustomerInvoiceTerms::class)->handle($this->actor(), $this->booking(), (bool) $data['enabled'], (int) $data['term_days']);
@@ -147,7 +148,7 @@ class ViewBooking extends ViewRecord
 
     private function invoiceTerms(): ?CustomerInvoiceTerms
     {
-        return CustomerInvoiceTerms::query()->where('customer_id', $this->booking()->customer_id)->where('centre_id', $this->booking()->centre_id)->first();
+        return CustomerInvoiceTerms::query()->responsibleFor($this->booking())->first();
     }
 
     private function actor(): User

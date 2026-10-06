@@ -23,6 +23,7 @@ use Spatie\Activitylog\Models\Activity;
  * @property int|null $occurrence_index
  * @property string $reference
  * @property int $customer_id
+ * @property int|null $organisation_id
  * @property int $centre_id
  * @property int $facility_id
  * @property int $resource_id
@@ -37,8 +38,9 @@ use Spatie\Activitylog\Models\Activity;
  * @property CarbonInterface|null $payment_due_at
  * @property BillingMethod $billing_method
  * @property int|null $invoice_term_days
+ * @property-read Organisation|null $organisation
  */
-#[Fillable(['booking_series_id', 'occurrence_index', 'reference', 'customer_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status', 'payment_due_at', 'billing_method', 'invoice_term_days'])]
+#[Fillable(['booking_series_id', 'occurrence_index', 'reference', 'customer_id', 'organisation_id', 'centre_id', 'facility_id', 'resource_id', 'starts_at', 'ends_at', 'status', 'financial_status', 'payment_due_at', 'billing_method', 'invoice_term_days'])]
 class Booking extends Model
 {
     /** @use HasFactory<BookingFactory> */
@@ -50,6 +52,12 @@ class Booking extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    /** @return BelongsTo<Organisation, $this> */
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class);
     }
 
     /**

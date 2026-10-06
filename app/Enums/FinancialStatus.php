@@ -13,7 +13,7 @@ enum FinancialStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::NotDue => 'Not due',
+            self::NotDue => 'Payment not due yet',
             self::AwaitingPayment => 'Awaiting payment',
             self::InvoiceOutstanding => 'Outstanding under invoice terms',
             self::Invoiced => 'Invoiced — outstanding',

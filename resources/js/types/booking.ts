@@ -8,6 +8,13 @@ export interface BookingSelectionPayload {
     starts_at: string;
     ends_at: string;
     equipment: BookingEquipmentSelection[];
+    organisation_id?: number;
+}
+
+export interface BookingOrganisationContext {
+    organisation_id: number;
+    name: string;
+    role_label: string;
 }
 
 export interface BookingReviewSelection extends BookingSelectionPayload {
@@ -33,6 +40,8 @@ export interface BookingSubmissionResponse {
         reference: string;
         status: 'requested';
         status_label: 'Requested / Awaiting Management Approval';
+        organisation_name?: string | null;
+        booked_by_name?: string;
     };
 }
 
@@ -95,6 +104,8 @@ export interface RecurringBookingConfirmation {
     first_date: string;
     last_date: string;
     timezone: string;
+    organisation_name?: string | null;
+    booked_by_name?: string;
     occurrences: Array<{
         index: number;
         reference: string;

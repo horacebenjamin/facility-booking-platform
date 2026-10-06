@@ -33,6 +33,12 @@ function money(amount: number, currency: string): string {
                     Issued {{ invoice.issue_date }} · Due {{ invoice.due_date }}
                 </p>
                 <p
+                    v-if="invoice.owner_type === 'organisation'"
+                    class="text-sm text-muted-foreground"
+                >
+                    Billed to organisation {{ invoice.owner_name }}
+                </p>
+                <p
                     v-if="invoice.status === 'issued'"
                     class="text-sm text-muted-foreground"
                 >

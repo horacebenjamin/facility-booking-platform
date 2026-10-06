@@ -9,6 +9,7 @@ import {
     canStartBookingSubmission,
     isBookingSubmissionResponse,
     sendBookingRequest,
+    withBookingOrganisation,
     type BookingRequestClient,
 } from '@/lib/booking';
 import { review as reviewBooking } from '@/routes/bookings';
@@ -147,6 +148,14 @@ describe('customer booking request state', () => {
                 'X-XSRF-TOKEN': 'csrf-token',
             },
             body: JSON.stringify(selection),
+        });
+    });
+
+    it('adds the chosen organisation only when booking for an organisation', () => {
+        expect(withBookingOrganisation(selection, null)).toEqual(selection);
+        expect(withBookingOrganisation(selection, 4)).toEqual({
+            ...selection,
+            organisation_id: 4,
         });
     });
 

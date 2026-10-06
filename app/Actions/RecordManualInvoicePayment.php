@@ -54,7 +54,9 @@ class RecordManualInvoicePayment
                     throw new InvoiceUnavailable($exception->getMessage(), previous: $exception);
                 }
                 if ($booking->billing_method !== BillingMethod::Invoice || $booking->status !== BookingStatus::Confirmed
-                    || $booking->financial_status !== FinancialStatus::Invoiced || $booking->customer_id !== $invoice->customer_id
+                    || $booking->financial_status !== FinancialStatus::Invoiced
+                    || $booking->organisation_id !== $invoice->organisation_id
+                    || ($invoice->organisation_id === null && $booking->customer_id !== $invoice->customer_id)
                     || $line->charge_kind !== 'booking_total' || $snapshot->final_total_minor !== $line->amount_minor
                     || $snapshot->currency !== $invoice->currency || $booking->payments()->exists()) {
                     throw new InvoiceUnavailable('An invoice charge no longer matches its financial obligation.');

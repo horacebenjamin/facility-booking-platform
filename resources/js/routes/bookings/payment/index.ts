@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\BookingPaymentController::show
-* @see app/Http/Controllers/BookingPaymentController.php:21
+* @see app/Http/Controllers/BookingPaymentController.php:22
 * @route '/bookings/{booking}/payment'
 */
 export const show = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::show
-* @see app/Http/Controllers/BookingPaymentController.php:21
+* @see app/Http/Controllers/BookingPaymentController.php:22
 * @route '/bookings/{booking}/payment'
 */
 show.url = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ show.url = (args: { booking: number | { id: number } } | [booking: number | { id
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::show
-* @see app/Http/Controllers/BookingPaymentController.php:21
+* @see app/Http/Controllers/BookingPaymentController.php:22
 * @route '/bookings/{booking}/payment'
 */
 show.get = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -59,7 +59,7 @@ show.get = (args: { booking: number | { id: number } } | [booking: number | { id
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::show
-* @see app/Http/Controllers/BookingPaymentController.php:21
+* @see app/Http/Controllers/BookingPaymentController.php:22
 * @route '/bookings/{booking}/payment'
 */
 show.head = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -69,7 +69,7 @@ show.head = (args: { booking: number | { id: number } } | [booking: number | { i
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::show
-* @see app/Http/Controllers/BookingPaymentController.php:21
+* @see app/Http/Controllers/BookingPaymentController.php:22
 * @route '/bookings/{booking}/payment'
 */
 const showForm = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ const showForm = (args: { booking: number | { id: number } } | [booking: number 
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::show
-* @see app/Http/Controllers/BookingPaymentController.php:21
+* @see app/Http/Controllers/BookingPaymentController.php:22
 * @route '/bookings/{booking}/payment'
 */
 showForm.get = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -89,7 +89,7 @@ showForm.get = (args: { booking: number | { id: number } } | [booking: number | 
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::show
-* @see app/Http/Controllers/BookingPaymentController.php:21
+* @see app/Http/Controllers/BookingPaymentController.php:22
 * @route '/bookings/{booking}/payment'
 */
 showForm.head = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -106,7 +106,7 @@ show.form = showForm
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::store
-* @see app/Http/Controllers/BookingPaymentController.php:79
+* @see app/Http/Controllers/BookingPaymentController.php:84
 * @route '/bookings/{booking}/payment'
 */
 export const store = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -121,7 +121,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::store
-* @see app/Http/Controllers/BookingPaymentController.php:79
+* @see app/Http/Controllers/BookingPaymentController.php:84
 * @route '/bookings/{booking}/payment'
 */
 store.url = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -154,7 +154,7 @@ store.url = (args: { booking: number | { id: number } } | [booking: number | { i
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::store
-* @see app/Http/Controllers/BookingPaymentController.php:79
+* @see app/Http/Controllers/BookingPaymentController.php:84
 * @route '/bookings/{booking}/payment'
 */
 store.post = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -164,7 +164,7 @@ store.post = (args: { booking: number | { id: number } } | [booking: number | { 
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::store
-* @see app/Http/Controllers/BookingPaymentController.php:79
+* @see app/Http/Controllers/BookingPaymentController.php:84
 * @route '/bookings/{booking}/payment'
 */
 const storeForm = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -174,7 +174,7 @@ const storeForm = (args: { booking: number | { id: number } } | [booking: number
 
 /**
 * @see \App\Http\Controllers\BookingPaymentController::store
-* @see app/Http/Controllers/BookingPaymentController.php:79
+* @see app/Http/Controllers/BookingPaymentController.php:84
 * @route '/bookings/{booking}/payment'
 */
 storeForm.post = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

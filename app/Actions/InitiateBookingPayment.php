@@ -23,13 +23,13 @@ class InitiateBookingPayment
         private PaymentService $paymentService,
     ) {}
 
-    public function handle(User $customer, Booking $booking): Payment
+    public function handle(User $actor, Booking $booking): Payment
     {
-        Gate::forUser($customer)->authorize('pay', $booking);
+        Gate::forUser($actor)->authorize('pay', $booking);
 
-        $payment = DB::transaction(function () use ($customer, $booking): Payment {
+        $payment = DB::transaction(function () use ($actor, $booking): Payment {
             $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
-            Gate::forUser($customer)->authorize('pay', $booking);
+            Gate::forUser($actor)->authorize('pay', $booking);
             $now = CarbonImmutable::now();
             $this->eligibility->assertLifecycle($booking, $now);
 
@@ -49,7 +49,7 @@ class InitiateBookingPayment
 
             if ($active !== null) {
                 if ($active->amount_minor !== $snapshot->final_total_minor || $active->currency !== $snapshot->currency
-                    || $active->customer_id !== $customer->id || $active->provider !== 'stripe'
+                    || $active->customer_id !== $booking->customer_id || $active->provider !== 'stripe'
                     || $active->live_mode !== (bool) config('payments.stripe_live_mode')
                     || $active->session_expires_at->lte($now)) {
                     throw new PaymentUnavailable('A previous payment requires reconciliation. Please contact the centre.');
@@ -68,7 +68,7 @@ class InitiateBookingPayment
             $returnUrl = route('bookings.payment.show', $booking);
             $payment = $booking->payments()->create([
                 'reference' => $reference,
-                'customer_id' => $customer->id,
+                'customer_id' => $booking->customer_id,
                 'provider' => 'stripe',
                 'amount_minor' => $snapshot->final_total_minor,
                 'currency' => $snapshot->currency,
@@ -94,24 +94,28 @@ class InitiateBookingPayment
                     ]],
                 ],
             ]);
-            activity('payment')->performedOn($payment)->causedBy($customer)
-                ->event('payment.initiated')->withProperties(['booking_id' => $booking->id])
+            activity('payment')->performedOn($payment)->causedBy($actor)
+                ->event('payment.initiated')->withProperties([
+                    'booking_id' => $booking->id,
+                    'organisation_id' => $booking->organisation_id,
+                    'actor_organisation_role' => $booking->organisation?->membershipFor($actor)?->role->value,
+                ])
                 ->log('Booking payment initiated');
 
             return $payment;
         });
 
         try {
-            return DB::transaction(function () use ($customer, $booking, $payment): Payment {
+            return DB::transaction(function () use ($actor, $booking, $payment): Payment {
                 $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
-                Gate::forUser($customer)->authorize('pay', $booking);
+                Gate::forUser($actor)->authorize('pay', $booking);
                 $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
                 $this->eligibility->assertLifecycle($booking, CarbonImmutable::now());
                 $this->eligibility->assertProtection($booking);
                 $snapshot = $this->eligibility->snapshot($booking);
 
                 if ($payment->amount_minor !== $snapshot->final_total_minor || $payment->currency !== $snapshot->currency
-                    || $payment->customer_id !== $customer->id || $payment->provider !== 'stripe'
+                    || $payment->customer_id !== $booking->customer_id || $payment->provider !== 'stripe'
                     || $payment->live_mode !== (bool) config('payments.stripe_live_mode')) {
                     throw new PaymentUnavailable('The reserved payment requires review. Please contact the centre.');
                 }

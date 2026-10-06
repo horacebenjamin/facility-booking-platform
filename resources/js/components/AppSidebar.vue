@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Bell, LayoutGrid, Search } from '@lucide/vue';
+import { Bell, Building2, LayoutGrid, Search } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -17,6 +17,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as availabilityIndex } from '@/routes/availability';
 import { index as notificationIndex } from '@/routes/notifications';
+import { index as organisationIndex } from '@/routes/organisations';
 import type { NavItem } from '@/types';
 
 const auth = computed(() => usePage().props.auth);
@@ -44,6 +45,11 @@ const mainNavItems = computed<NavItem[]>(() =>
                   title: 'Find a facility',
                   href: availabilityIndex(),
                   icon: Search,
+              },
+              {
+                  title: 'Organisations',
+                  href: organisationIndex(),
+                  icon: Building2,
               },
           ]
         : [],

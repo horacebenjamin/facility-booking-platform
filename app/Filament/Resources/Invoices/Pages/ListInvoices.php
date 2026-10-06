@@ -27,14 +27,14 @@ class ListInvoices extends ListRecords
                 ->visible(fn (): bool => auth()->user()?->can('invoices.manage') === true)
                 ->schema([
                     Select::make('booking_ids')->label('Booking charges')->multiple()->searchable()->required()
-                        ->helperText('Select confirmed invoice bookings for one customer with matching currency and payment terms. Totals and due date are calculated from the booking records.')
-                        ->options(fn (): array => Booking::query()->with('customer')
+                        ->helperText('Select confirmed invoice bookings for one responsible customer or organisation with matching currency and payment terms. Totals and due date are calculated from the booking records.')
+                        ->options(fn (): array => Booking::query()->with(['customer', 'organisation'])
                             ->where('status', BookingStatus::Confirmed->value)
                             ->where('billing_method', BillingMethod::Invoice->value)
                             ->where('financial_status', FinancialStatus::InvoiceOutstanding->value)
                             ->whereHas('centre.assignedUsers', fn (Builder $query): Builder => $query->whereKey(auth()->id()))
                             ->orderBy('id')->get()
-                            ->mapWithKeys(fn (Booking $booking): array => [$booking->id => $booking->reference.' — '.$booking->customer->name])->all()),
+                            ->mapWithKeys(fn (Booking $booking): array => [$booking->id => $booking->reference.' — '.($booking->organisation === null ? $booking->customer->name : $booking->organisation->name.' (organisation)')])->all()),
                 ])
                 ->action(function (array $data): mixed {
                     /** @var User $actor */

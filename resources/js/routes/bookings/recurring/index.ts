@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\PreviewRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:18
 * @route '/bookings/recurring/preview'
 */
 export const preview = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ preview.definition = {
 
 /**
 * @see \App\Http\Controllers\PreviewRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:18
 * @route '/bookings/recurring/preview'
 */
 preview.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ preview.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PreviewRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:18
 * @route '/bookings/recurring/preview'
 */
 preview.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ preview.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\PreviewRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:18
 * @route '/bookings/recurring/preview'
 */
 const previewForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ const previewForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> =
 
 /**
 * @see \App\Http\Controllers\PreviewRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/PreviewRecurringBookingRequestController.php:18
 * @route '/bookings/recurring/preview'
 */
 previewForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -57,7 +57,7 @@ preview.form = previewForm
 
 /**
 * @see \App\Http\Controllers\StoreRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:18
 * @route '/bookings/recurring'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -72,7 +72,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\StoreRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:18
 * @route '/bookings/recurring'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -81,7 +81,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\StoreRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:18
 * @route '/bookings/recurring'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -91,7 +91,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\StoreRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:18
 * @route '/bookings/recurring'
 */
 const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -101,7 +101,7 @@ const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => 
 
 /**
 * @see \App\Http\Controllers\StoreRecurringBookingRequestController::__invoke
-* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:17
+* @see app/Http/Controllers/StoreRecurringBookingRequestController.php:18
 * @route '/bookings/recurring'
 */
 storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

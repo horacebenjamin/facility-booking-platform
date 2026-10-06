@@ -40,6 +40,7 @@ class IssueInvoice
                 throw new InvoiceUnavailable('One or more booking charges are unavailable.');
             }
             $customerId = $bookings->firstOrFail()->customer_id;
+            $organisationId = $bookings->firstOrFail()->organisation_id;
             $termDays = $bookings->firstOrFail()->invoice_term_days;
             $currency = null;
             $lines = [];
@@ -47,11 +48,13 @@ class IssueInvoice
                 Gate::forUser($actor)->authorize('manageInvoiceTerms', $booking);
                 if ($booking->billing_method !== BillingMethod::Invoice || $booking->status !== BookingStatus::Confirmed
                     || $booking->financial_status !== FinancialStatus::InvoiceOutstanding
-                    || $booking->customer_id !== $customerId || $booking->invoice_term_days !== $termDays
+                    || $booking->organisation_id !== $organisationId
+                    || ($organisationId === null && $booking->customer_id !== $customerId)
+                    || $booking->invoice_term_days !== $termDays
                     || $termDays === null || $termDays < 1 || $termDays > 365
                     || $booking->invoiceLines()->where('charge_kind', 'booking_total')->exists()
                     || $booking->payments()->exists()) {
-                    throw new InvoiceUnavailable('Only uninvoiced, confirmed bookings with the same customer and agreed terms can be invoiced together.');
+                    throw new InvoiceUnavailable('Only uninvoiced, confirmed bookings with the same responsible customer or organisation and agreed terms can be invoiced together.');
                 }
                 try {
                     $snapshot = $this->eligibility->snapshot($booking);
@@ -67,7 +70,7 @@ class IssueInvoice
                     'amount_minor' => $snapshot->final_total_minor];
             }
             $invoice = Invoice::query()->create([
-                'reference' => 'INV-'.Str::uuid(), 'customer_id' => $customerId, 'issued_by' => $actor->id,
+                'reference' => 'INV-'.Str::uuid(), 'customer_id' => $customerId, 'organisation_id' => $organisationId, 'issued_by' => $actor->id,
                 'issue_date' => today(), 'due_date' => today()->addDays($termDays),
                 'status' => InvoiceStatus::Issued, 'currency' => $currency, 'total_minor' => array_sum(array_column($lines, 'amount_minor')),
             ]);
@@ -80,7 +83,7 @@ class IssueInvoice
                     ->log('Booking charge invoiced');
             }
             $activity = activity('invoice')->performedOn($invoice)->causedBy($actor)->event('invoice.issued')
-                ->withProperties(['booking_ids' => $bookingIds, 'total_minor' => $invoice->total_minor, 'currency' => $currency, 'due_date' => $invoice->due_date->toDateString()])
+                ->withProperties(['booking_ids' => $bookingIds, 'organisation_id' => $organisationId, 'total_minor' => $invoice->total_minor, 'currency' => $currency, 'due_date' => $invoice->due_date->toDateString()])
                 ->log('Invoice issued');
 
             if ($activity instanceof Activity) {

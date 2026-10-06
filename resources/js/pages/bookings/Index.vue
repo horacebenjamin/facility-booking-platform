@@ -24,6 +24,9 @@ defineProps<{
         occurrence_index: number | null;
         occurrence_count: number | null;
         can_pay: boolean;
+        owner_type: 'individual' | 'organisation';
+        owner_name: string;
+        booked_by_name: string;
     }[];
 }>();
 </script>
@@ -38,8 +41,9 @@ defineProps<{
                     >My invoices</Link
                 >
                 <p class="text-sm text-muted-foreground">
-                    Your latest 50 booking occurrences. Payment is available
-                    after approval where required.
+                    Your latest 50 booking occurrences, including bookings for
+                    your organisations. Payment is available after approval
+                    where required.
                 </p>
                 <p v-if="bookings.length === 0">
                     You have no booking requests yet.
@@ -64,6 +68,13 @@ defineProps<{
                                 <p class="text-sm text-muted-foreground">
                                     {{ booking.facility_name }} ·
                                     {{ booking.centre_name }}
+                                </p>
+                                <p
+                                    v-if="booking.owner_type === 'organisation'"
+                                    class="text-sm text-muted-foreground"
+                                >
+                                    {{ booking.owner_name }} · booked by
+                                    {{ booking.booked_by_name }}
                                 </p>
                             </div>
                             <Badge variant="secondary">{{

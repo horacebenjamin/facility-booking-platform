@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\AmendBooking;
 use App\Actions\CancelBooking;
+use App\Enums\OrganisationRole;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
 use App\Exceptions\BookingSubmissionUnavailable;
 use App\Http\Requests\AmendBookingRequest;
@@ -25,9 +26,20 @@ class CustomerBookingController extends Controller
         $customer = $request->user();
         abort_unless($customer->can('bookings.view'), 403);
 
+        $organisationIds = $customer->organisationMemberships()
+            ->whereIn('role', collect(OrganisationRole::cases())
+                ->filter(fn (OrganisationRole $role): bool => $role->canViewBookings())
+                ->map->value)
+            ->pluck('organisation_id');
+
         return Inertia::render('bookings/Index', [
-            'bookings' => $customer->bookings()
-                ->with(['centre', 'facility', 'resource', 'series', 'invoiceLines.invoice'])
+            'bookings' => Booking::query()
+                ->where(function ($query) use ($customer, $organisationIds): void {
+                    $query->where(function ($personal) use ($customer): void {
+                        $personal->whereNull('organisation_id')->where('customer_id', $customer->id);
+                    })->orWhereIn('organisation_id', $organisationIds);
+                })
+                ->with(['customer', 'organisation', 'centre', 'facility', 'resource', 'series', 'invoiceLines.invoice.organisation'])
                 ->latest('starts_at')
                 ->latest('id')
                 ->limit(50)
@@ -41,15 +53,16 @@ class CustomerBookingController extends Controller
     {
         /** @var User $customer */
         $customer = $request->user();
-        $this->ensureOwned($customer, $booking);
+        $this->ensureAccessible($customer, $booking);
         $booking->load([
             'centre',
             'facility',
             'resource',
+            'customer',
+            'organisation',
             'series.bookings',
-            'invoiceLines' => fn ($query) => $query
-                ->whereHas('invoice', fn ($invoiceQuery) => $invoiceQuery->where('customer_id', $customer->id))
-                ->with('invoice'),
+            'series.bookings.organisation',
+            'invoiceLines.invoice.organisation',
             'activities',
         ]);
 
@@ -62,7 +75,7 @@ class CustomerBookingController extends Controller
     {
         /** @var User $customer */
         $customer = $request->user();
-        $this->ensureOwned($customer, $booking);
+        $this->ensureAccessible($customer, $booking);
 
         try {
             $cancel->handle($customer, $booking, $request->validated('reason'));
@@ -77,7 +90,7 @@ class CustomerBookingController extends Controller
     {
         /** @var User $customer */
         $customer = $request->user();
-        $this->ensureOwned($customer, $booking);
+        $this->ensureAccessible($customer, $booking);
         $data = $request->validated();
 
         try {
@@ -96,8 +109,8 @@ class CustomerBookingController extends Controller
         return to_route('bookings.show', $booking)->with('success', 'Your booking amendment was saved.');
     }
 
-    private function ensureOwned(User $customer, Booking $booking): void
+    private function ensureAccessible(User $customer, Booking $booking): void
     {
-        abort_unless($customer->id === $booking->customer_id, 404);
+        abort_unless($customer->can('viewCustomer', $booking), 404);
     }
 }

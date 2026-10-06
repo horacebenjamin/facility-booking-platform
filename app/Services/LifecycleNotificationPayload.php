@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\User;
 use Spatie\Activitylog\Models\Activity;
 
 class LifecycleNotificationPayload
@@ -20,6 +21,7 @@ class LifecycleNotificationPayload
         $label = 'View bookings';
         $url = route('bookings.index', absolute: false);
         if ($subject instanceof Booking) {
+            $responsible = $subject;
             $context = 'Booking '.$subject->reference;
             if ($subject->occurrence_index !== null) {
                 $context .= ' (recurring occurrence '.$subject->occurrence_index.')';
@@ -41,6 +43,7 @@ class LifecycleNotificationPayload
             if ($obligation === null || $obligation->customer_id !== $subject->customer_id) {
                 return null;
             }
+            $responsible = $obligation;
             $type = 'payment.received';
             $title = 'Payment received';
             $body = 'Payment of '.$this->money($subject->amount_minor, $subject->currency).' was received for '.($obligation instanceof Invoice ? 'invoice ' : 'booking ').$obligation->reference.'.';
@@ -52,6 +55,7 @@ class LifecycleNotificationPayload
                 $url = route('invoices.show', $obligation, absolute: false);
             }
         } elseif ($subject instanceof Invoice && $event === 'invoice.issued') {
+            $responsible = $subject;
             $type = 'invoice.issued';
             $title = 'Invoice issued';
             $body = 'Invoice '.$subject->reference.' was issued on '.$subject->issue_date->toDateString().' for '.$this->money($subject->total_minor, $subject->currency).'. Its due date is '.$subject->due_date->toDateString().'. Check the invoice for its current outstanding balance.';
@@ -62,6 +66,20 @@ class LifecycleNotificationPayload
         }
         if ($type === null) {
             return null;
+        }
+        if ($responsible->organisation_id !== null) {
+            $recipient = User::query()->find($subject->customer_id);
+            if ($recipient === null || ! $recipient->can('viewCustomer', $responsible)) {
+                return null;
+            }
+            if ($responsible instanceof Booking && ($subject instanceof Payment || $event === 'booking.approved')
+                && ! $recipient->can('viewPayment', $responsible)) {
+                if ($subject instanceof Payment) {
+                    return null;
+                }
+                $label = 'View booking';
+                $url = route('bookings.show', $subject, absolute: false);
+            }
         }
 
         return ['customer_id' => $subject->customer_id, 'type' => $type, 'semantic_key' => $type.':'.$subject->getMorphClass().':'.$subject->getKey(), 'payload' => [

@@ -25,7 +25,9 @@ function money(amount: number, currency: string): string {
                     >My bookings</Link
                 >
                 <p class="text-sm text-muted-foreground">
-                    Your latest 50 invoices under agreed billing terms.
+                    Your latest 50 invoices under agreed billing terms,
+                    including invoices for organisations where you have finance
+                    access.
                 </p>
                 <p v-if="invoices.length === 0">You have no issued invoices.</p>
                 <ul class="space-y-4">
@@ -43,6 +45,12 @@ function money(amount: number, currency: string): string {
                             {{ invoice.status_label
                             }}{{ invoice.overdue ? ' · Overdue' : '' }} ·
                             {{ money(invoice.total_minor, invoice.currency) }}
+                        </p>
+                        <p
+                            v-if="invoice.owner_type === 'organisation'"
+                            class="text-sm text-muted-foreground"
+                        >
+                            Organisation: {{ invoice.owner_name }}
                         </p>
                         <p class="text-sm">
                             Due {{ invoice.due_date }} · Outstanding

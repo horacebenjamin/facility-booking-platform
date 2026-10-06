@@ -15,6 +15,7 @@ use App\Models\BookingPriceSnapshot;
 use App\Models\BookingSeries;
 use App\Models\Equipment;
 use App\Models\EquipmentAllocation;
+use App\Models\Organisation;
 use App\Models\Resource;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -216,6 +217,7 @@ class BookingRequestEngine
         ?BookingSeries $series = null,
         ?int $occurrenceIndex = null,
         ?User $actor = null,
+        ?Organisation $organisation = null,
     ): Booking {
         $quote = $validation->pricing?->quote;
         $operationalPeriod = $validation->operationalPeriod;
@@ -230,6 +232,7 @@ class BookingRequestEngine
             'occurrence_index' => $occurrenceIndex,
             'reference' => $this->reference(),
             'customer_id' => $customer->id,
+            'organisation_id' => $organisation?->id,
             'centre_id' => $context->resource->facility->centre_id,
             'facility_id' => $context->resource->facility_id,
             'resource_id' => $context->resource->id,
@@ -271,8 +274,12 @@ class BookingRequestEngine
             ->causedBy($actor ?? $customer)
             ->event('booking.requested')
             ->withProperties([
-                'booking_channel' => $actor === null ? 'customer_self_service' : 'staff_assisted',
+                'booking_channel' => $actor !== null
+                    ? 'staff_assisted'
+                    : ($organisation === null ? 'customer_self_service' : 'organisation_self_service'),
                 'customer_id' => $customer->id,
+                'organisation_id' => $organisation?->id,
+                'actor_organisation_role' => $organisation?->membershipFor($actor ?? $customer)?->role->value,
                 'centre_id' => $booking->centre_id,
                 'facility_id' => $booking->facility_id,
                 'resource_id' => $booking->resource_id,

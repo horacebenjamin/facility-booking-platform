@@ -7,6 +7,7 @@ use App\Enums\RecurrenceFrequency;
 use App\Exceptions\BookingSubmissionUnavailable;
 use App\Http\Requests\StoreRecurringBookingRequest;
 use App\Models\User;
+use App\Services\OrganisationBookingContext;
 use App\Services\RecurrencePattern;
 use App\Services\RecurringBookingPayload;
 use Carbon\CarbonImmutable;
@@ -18,8 +19,9 @@ class StoreRecurringBookingRequestController extends Controller
         StoreRecurringBookingRequest $request,
         CreateRecurringBookingRequest $createRecurringBookingRequest,
         RecurringBookingPayload $payload,
+        OrganisationBookingContext $organisationContext,
     ): JsonResponse {
-        /** @var array{resource_id: int, starts_at: string, ends_at: string, interval_weeks: int, occurrence_count: int, timezone: string, equipment?: list<array{equipment_id: int, quantity: int}>, submission_mode: string, selected_occurrence_indexes?: list<int>} $validated */
+        /** @var array{resource_id: int, starts_at: string, ends_at: string, interval_weeks: int, occurrence_count: int, timezone: string, equipment?: list<array{equipment_id: int, quantity: int}>, submission_mode: string, selected_occurrence_indexes?: list<int>, organisation_id?: int|null} $validated */
         $validated = $request->validated();
         $pattern = new RecurrencePattern(
             RecurrenceFrequency::Weekly,
@@ -29,6 +31,7 @@ class StoreRecurringBookingRequestController extends Controller
         );
         /** @var User $customer */
         $customer = $request->user();
+        $organisation = $organisationContext->resolveBookable($customer, $validated['organisation_id'] ?? null);
         $selectedOccurrenceIndexes = $validated['submission_mode'] === 'available_occurrences'
             ? ($validated['selected_occurrence_indexes'] ?? [])
             : null;
@@ -41,6 +44,7 @@ class StoreRecurringBookingRequestController extends Controller
                 $pattern,
                 $validated['equipment'] ?? [],
                 $selectedOccurrenceIndexes,
+                organisation: $organisation,
             );
         } catch (BookingSubmissionUnavailable) {
             return response()->json([

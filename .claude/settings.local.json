@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash ./vendor/bin/sail npm run check)"
+    ]
+  }
+}

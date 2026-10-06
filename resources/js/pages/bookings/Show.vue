@@ -53,6 +53,9 @@ const props = defineProps<{
         occurrence_index: number | null;
         occurrence_count: number | null;
         can_pay: boolean;
+        owner_type: 'individual' | 'organisation';
+        owner_name: string;
+        booked_by_name: string;
         can_cancel: boolean;
         cancellation_unavailable_reason: string | null;
         can_amend: boolean;
@@ -137,6 +140,18 @@ function localInput(value: string): string {
                             <p class="text-muted-foreground">Financial state</p>
                             <p>{{ booking.financial_status_label }}</p>
                         </div>
+                        <template v-if="booking.owner_type === 'organisation'">
+                            <div>
+                                <p class="text-muted-foreground">
+                                    Organisation
+                                </p>
+                                <p>{{ booking.owner_name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-muted-foreground">Booked by</p>
+                                <p>{{ booking.booked_by_name }}</p>
+                            </div>
+                        </template>
                         <div
                             v-if="booking.payment_due_at"
                             class="sm:col-span-2"

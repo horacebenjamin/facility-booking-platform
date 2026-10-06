@@ -98,7 +98,8 @@ describe('recurring booking presentation', () => {
 
         expect(html).toContain('Repeat every');
         expect(html).toContain('Number of bookings');
-        expect(html).toContain('Europe/London');
+        expect(html).not.toContain('UK local time');
+        expect(html).not.toContain('Europe/London');
         expect(html).toContain('Preview recurring dates');
         expect(html).not.toContain('monthly');
     });
@@ -130,6 +131,8 @@ describe('recurring booking presentation', () => {
                 first_date: '5 Oct 2026',
                 last_date: '19 Oct 2026',
                 timezone: 'Europe/London',
+                organisation_name: null,
+                booked_by_name: 'Alex Example',
                 occurrences: [
                     {
                         index: 1,
@@ -157,5 +160,45 @@ describe('recurring booking presentation', () => {
         expect(html).toContain('Occurrence 1');
         expect(html).toContain('Occurrence 3');
         expect(html).not.toContain('Confirmed');
+        expect(html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')).toContain(
+            'Booking for: Alex Example',
+        );
+        expect(html).not.toContain('Organisation');
+        expect(html).not.toContain('Booked by');
+        expect(html).not.toContain('UK local time');
+        expect(html).not.toContain('Europe/London');
+    });
+
+    it('shows the responsible organisation and booker on an organisation recurring confirmation', async () => {
+        const app = createSSRApp(RecurringBookingConfirmation, {
+            confirmation: {
+                identifier: '65d78bc1-d51a-45e9-8bd8-9758a6b22283',
+                status: 'requested',
+                status_label: 'Requested / Awaiting Management Approval',
+                occurrence_count: 1,
+                requested_occurrence_count: 1,
+                first_date: '5 Oct 2026',
+                last_date: '5 Oct 2026',
+                timezone: 'Europe/London',
+                organisation_name: 'Riverside Rowing Club',
+                booked_by_name: 'Alex Example',
+                occurrences: [
+                    {
+                        index: 1,
+                        reference: 'BKG-12345678',
+                        starts_at: '2026-10-05 18:00:00',
+                        ends_at: '2026-10-05 19:30:00',
+                        price: { currency: 'GBP', total_minor: 7500 },
+                    },
+                ],
+            },
+        });
+
+        const html = await renderToString(app);
+
+        expect(html).toContain('Riverside Rowing Club');
+        expect(html).toContain('Booked by Alex Example');
+        expect(html).toContain('Organisation');
+        expect(html).not.toContain('Booking for:');
     });
 });

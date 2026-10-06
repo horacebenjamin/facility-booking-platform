@@ -13,7 +13,6 @@ use App\Services\BookingPaymentEligibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -22,8 +21,7 @@ class BookingPaymentController extends Controller
 {
     public function show(Request $request, Booking $booking, BookingPaymentEligibility $eligibility): Response|RedirectResponse
     {
-        abort_unless($request->user()?->id === $booking->customer_id, 404);
-        Gate::authorize('viewPayment', $booking);
+        abort_unless($request->user()?->can('viewPayment', $booking), 404);
         if ($booking->billing_method === BillingMethod::Invoice) {
             $line = $booking->invoiceLines()->first();
 

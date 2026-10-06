@@ -41,6 +41,7 @@ class BookingResource extends Resource
             ->columns([
                 TextColumn::make('reference')->searchable()->sortable(),
                 TextColumn::make('customer.name')->label('Customer')->searchable()->sortable(),
+                TextColumn::make('organisation.name')->label('Organisation')->placeholder('Individual')->searchable(),
                 TextColumn::make('centre.name')->label('Centre')->sortable(),
                 TextColumn::make('facility.name')->label('Facility')->sortable(),
                 TextColumn::make('resource.name')->label('Resource')->searchable()->sortable(),
@@ -92,9 +93,10 @@ class BookingResource extends Resource
             Section::make('Customer and venue')->schema([
                 TextEntry::make('customer.name')->label('Customer'),
                 TextEntry::make('customer.email')->label('Customer email'),
+                TextEntry::make('organisation.name')->label('Responsible organisation')->placeholder('Individual booking'),
                 TextEntry::make('invoice_eligibility')->label('Invoice eligibility at this centre')
                     ->state(function (Booking $record): string {
-                        $terms = CustomerInvoiceTerms::query()->where('customer_id', $record->customer_id)->where('centre_id', $record->centre_id)->first();
+                        $terms = CustomerInvoiceTerms::query()->responsibleFor($record)->first();
 
                         return $terms?->enabled ? 'Authorised — '.$terms->term_days.' day terms' : 'Card payment required';
                     }),
@@ -173,6 +175,7 @@ class BookingResource extends Resource
         return parent::getEloquentQuery()
             ->with([
                 'customer',
+                'organisation',
                 'centre',
                 'facility',
                 'resource',

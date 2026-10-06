@@ -58,6 +58,8 @@ describe('customer booking request presentation', () => {
                 reference: 'BKG-12345678',
                 status: 'requested',
                 status_label: 'Requested / Awaiting Management Approval',
+                organisation_name: null,
+                booked_by_name: 'Alex Example',
             },
             selection,
             quote,
@@ -66,9 +68,33 @@ describe('customer booking request presentation', () => {
         const html = await renderToString(app);
 
         expect(html).toContain('Booking request received');
+        expect(html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')).toContain(
+            'Booking for: Alex Example',
+        );
         expect(html).toContain('BKG-12345678');
         expect(html).toContain('Requested / Awaiting Management Approval');
         expect(html).toContain('provisional reservation');
         expect(html).not.toContain('Confirmed');
+        expect(html).not.toContain('Organisation');
+    });
+
+    it('shows the responsible organisation and booker for organisation bookings', async () => {
+        const app = createSSRApp(BookingConfirmation, {
+            booking: {
+                reference: 'BKG-12345678',
+                status: 'requested',
+                status_label: 'Requested / Awaiting Management Approval',
+                organisation_name: 'Riverside Rowing Club',
+                booked_by_name: 'Alex Example',
+            },
+            selection,
+            quote,
+        });
+
+        const html = await renderToString(app);
+
+        expect(html).toContain('Riverside Rowing Club');
+        expect(html).toContain('Booked by Alex Example');
+        expect(html).not.toContain('Booking for:');
     });
 });

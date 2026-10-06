@@ -15,6 +15,7 @@ use App\Models\BookingEquipment;
 use App\Models\CustomerInvoiceTerms;
 use App\Models\Equipment;
 use App\Models\EquipmentAllocation;
+use App\Models\Organisation;
 use App\Models\Resource;
 use App\Models\User;
 use App\Services\AvailabilityService;
@@ -141,8 +142,10 @@ class ApproveBooking
             }
 
             User::query()->lockForUpdate()->findOrFail($booking->customer_id);
-            $terms = CustomerInvoiceTerms::query()->where('customer_id', $booking->customer_id)
-                ->where('centre_id', $booking->centre_id)->where('enabled', true)->lockForUpdate()->first();
+            if ($booking->organisation_id !== null) {
+                Organisation::query()->lockForUpdate()->findOrFail($booking->organisation_id);
+            }
+            $terms = CustomerInvoiceTerms::query()->responsibleFor($booking)->where('enabled', true)->lockForUpdate()->first();
             if ($terms !== null) {
                 try {
                     $this->paymentEligibility->snapshot($booking);

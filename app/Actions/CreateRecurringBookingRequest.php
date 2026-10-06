@@ -3,16 +3,19 @@
 namespace App\Actions;
 
 use App\Models\BookingSeries;
+use App\Models\Organisation;
 use App\Models\User;
 use App\Services\BookingRequestEngine;
 use App\Services\BookingSeriesValidator;
 use App\Services\CentreReservationLock;
 use App\Services\CreateBookingSeriesResult;
+use App\Services\OrganisationBookingContext;
 use App\Services\RecurrenceGenerator;
 use App\Services\RecurrencePattern;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -23,6 +26,7 @@ class CreateRecurringBookingRequest
         private BookingRequestEngine $bookingRequestEngine,
         private BookingSeriesValidator $bookingSeriesValidator,
         private CentreReservationLock $centreReservationLock,
+        private OrganisationBookingContext $organisationBookingContext,
     ) {}
 
     /**
@@ -37,15 +41,21 @@ class CreateRecurringBookingRequest
         RecurrencePattern $pattern,
         array $equipmentSelections = [],
         ?array $selectedOccurrenceIndexes = null,
+        ?Organisation $organisation = null,
     ): CreateBookingSeriesResult {
-        $this->authorize($customer);
+        $this->authorize($customer, $organisation);
         $periods = $this->recurrenceGenerator->generate($firstStartsAt, $firstEndsAt, $pattern);
         $this->validateSelectedOccurrenceIndexes($selectedOccurrenceIndexes, $pattern->occurrenceCount);
 
         $centreId = $this->centreReservationLock->centreIdForResource($resourceId);
 
-        return DB::transaction(function () use ($centreId, $customer, $resourceId, $pattern, $equipmentSelections, $periods, $selectedOccurrenceIndexes): CreateBookingSeriesResult {
+        return DB::transaction(function () use ($centreId, $customer, $resourceId, $pattern, $equipmentSelections, $periods, $selectedOccurrenceIndexes, $organisation): CreateBookingSeriesResult {
             $context = $this->bookingRequestEngine->lockContext($resourceId, $equipmentSelections, $centreId);
+
+            if ($organisation !== null) {
+                $organisation = $this->organisationBookingContext->lockForBooking($customer, $organisation);
+            }
+
             $evaluatedAt = CarbonImmutable::now(config('app.timezone'));
             $validation = $this->bookingSeriesValidator->validate($context, $periods, $evaluatedAt);
             $occurrencesToPersist = $validation->validOccurrences;
@@ -70,6 +80,7 @@ class CreateRecurringBookingRequest
             $series = BookingSeries::query()->create([
                 'identifier' => (string) Str::uuid(),
                 'customer_id' => $customer->id,
+                'organisation_id' => $organisation?->id,
                 'centre_id' => $context->resource->facility->centre_id,
                 'facility_id' => $context->resource->facility_id,
                 'resource_id' => $context->resource->id,
@@ -93,6 +104,7 @@ class CreateRecurringBookingRequest
                     evaluatedAt: $evaluatedAt,
                     series: $series,
                     occurrenceIndex: $occurrence->period->index,
+                    organisation: $organisation,
                 );
             }
 
@@ -100,10 +112,14 @@ class CreateRecurringBookingRequest
         });
     }
 
-    private function authorize(User $customer): void
+    private function authorize(User $customer, ?Organisation $organisation): void
     {
         if (! $customer->can('bookings.create')) {
             throw new AuthorizationException;
+        }
+
+        if ($organisation !== null) {
+            Gate::forUser($customer)->authorize('createBooking', $organisation);
         }
     }
 

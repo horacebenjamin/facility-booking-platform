@@ -82,10 +82,10 @@ index.form = indexForm
 
 /**
 * @see \App\Http\Controllers\CustomerInvoiceController::show
-* @see app/Http/Controllers/CustomerInvoiceController.php:25
+* @see app/Http/Controllers/CustomerInvoiceController.php:39
 * @route '/invoices/{invoice}'
 */
-export const show = (args: { invoice: string | number | { id: string | number } } | [invoice: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { invoice: number | { id: number } } | [invoice: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -97,10 +97,10 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\CustomerInvoiceController::show
-* @see app/Http/Controllers/CustomerInvoiceController.php:25
+* @see app/Http/Controllers/CustomerInvoiceController.php:39
 * @route '/invoices/{invoice}'
 */
-show.url = (args: { invoice: string | number | { id: string | number } } | [invoice: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+show.url = (args: { invoice: number | { id: number } } | [invoice: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { invoice: args }
     }
@@ -130,50 +130,50 @@ show.url = (args: { invoice: string | number | { id: string | number } } | [invo
 
 /**
 * @see \App\Http\Controllers\CustomerInvoiceController::show
-* @see app/Http/Controllers/CustomerInvoiceController.php:25
+* @see app/Http/Controllers/CustomerInvoiceController.php:39
 * @route '/invoices/{invoice}'
 */
-show.get = (args: { invoice: string | number | { id: string | number } } | [invoice: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { invoice: number | { id: number } } | [invoice: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
 
 /**
 * @see \App\Http\Controllers\CustomerInvoiceController::show
-* @see app/Http/Controllers/CustomerInvoiceController.php:25
+* @see app/Http/Controllers/CustomerInvoiceController.php:39
 * @route '/invoices/{invoice}'
 */
-show.head = (args: { invoice: string | number | { id: string | number } } | [invoice: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { invoice: number | { id: number } } | [invoice: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
 
 /**
 * @see \App\Http\Controllers\CustomerInvoiceController::show
-* @see app/Http/Controllers/CustomerInvoiceController.php:25
+* @see app/Http/Controllers/CustomerInvoiceController.php:39
 * @route '/invoices/{invoice}'
 */
-const showForm = (args: { invoice: string | number | { id: string | number } } | [invoice: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+const showForm = (args: { invoice: number | { id: number } } | [invoice: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: show.url(args, options),
     method: 'get',
 })
 
 /**
 * @see \App\Http\Controllers\CustomerInvoiceController::show
-* @see app/Http/Controllers/CustomerInvoiceController.php:25
+* @see app/Http/Controllers/CustomerInvoiceController.php:39
 * @route '/invoices/{invoice}'
 */
-showForm.get = (args: { invoice: string | number | { id: string | number } } | [invoice: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+showForm.get = (args: { invoice: number | { id: number } } | [invoice: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: show.url(args, options),
     method: 'get',
 })
 
 /**
 * @see \App\Http\Controllers\CustomerInvoiceController::show
-* @see app/Http/Controllers/CustomerInvoiceController.php:25
+* @see app/Http/Controllers/CustomerInvoiceController.php:39
 * @route '/invoices/{invoice}'
 */
-showForm.head = (args: { invoice: string | number | { id: string | number } } | [invoice: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+showForm.head = (args: { invoice: number | { id: number } } | [invoice: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: show.url(args, {
         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
             _method: 'HEAD',

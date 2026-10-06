@@ -32,6 +32,7 @@ class InvoiceResource extends Resource
         return $table->defaultSort('issue_date', 'desc')->columns([
             TextColumn::make('reference')->searchable(),
             TextColumn::make('customer.name')->label('Customer')->searchable(),
+            TextColumn::make('organisation.name')->label('Organisation')->placeholder('Individual')->searchable(),
             TextColumn::make('status')->badge()->formatStateUsing(fn (InvoiceStatus $state): string => $state->label()),
             TextColumn::make('issue_date')->date('j M Y')->sortable(),
             TextColumn::make('due_date')->date('j M Y')->sortable(),
@@ -46,6 +47,7 @@ class InvoiceResource extends Resource
             Section::make('Invoice')->schema([
                 TextEntry::make('reference')->copyable(),
                 TextEntry::make('customer.name')->label('Customer'),
+                TextEntry::make('organisation.name')->label('Responsible organisation')->placeholder('Individual invoice'),
                 TextEntry::make('status')->badge()->formatStateUsing(fn (InvoiceStatus $state): string => $state->label()),
                 TextEntry::make('issue_date')->date('j M Y'),
                 TextEntry::make('due_date')->date('j M Y'),
@@ -73,7 +75,7 @@ class InvoiceResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['customer', 'lines.booking.centre', 'activities.causer'])
+            ->with(['customer', 'organisation', 'lines.booking.centre', 'activities.causer'])
             ->whereHas('lines')
             ->whereDoesntHave('lines.booking', fn (Builder $query): Builder => $query
                 ->whereDoesntHave('centre.assignedUsers', fn (Builder $users): Builder => $users->whereKey(auth()->id())));

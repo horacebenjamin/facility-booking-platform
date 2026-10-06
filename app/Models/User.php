@@ -98,6 +98,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, Pas
         return $this->hasMany(Booking::class, 'customer_id');
     }
 
+    /** @return HasMany<OrganisationMembership, $this> */
+    public function organisationMemberships(): HasMany
+    {
+        return $this->hasMany(OrganisationMembership::class);
+    }
+
     /** @return HasMany<Invoice, $this> */
     public function invoices(): HasMany
     {
@@ -127,5 +133,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, Pas
         return $this->assignedCentres()
             ->where('centres.id', $centre->id)
             ->exists();
+    }
+
+    public function organisationMembership(Organisation $organisation): ?OrganisationMembership
+    {
+        return $this->organisationMemberships()
+            ->whereBelongsTo($organisation)
+            ->first();
     }
 }

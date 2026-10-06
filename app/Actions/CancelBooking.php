@@ -72,6 +72,8 @@ class CancelBooking
                 ->event('booking.cancelled')
                 ->withProperties([
                     'reason' => $reason,
+                    'organisation_id' => $booking->organisation_id,
+                    'actor_organisation_role' => $booking->organisation?->membershipFor($actor)?->role->value,
                     'financial_follow_up' => $this->managementPolicy->financialFollowUp($booking),
                     'financial_status_unchanged' => $booking->financial_status->value,
                 ])

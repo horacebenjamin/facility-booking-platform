@@ -95,6 +95,21 @@ class CustomerBookingManagementTest extends TestCase
                 ->missing('bookings.0.payments'));
     }
 
+    public function test_customer_sees_a_clear_financial_label_for_a_booking_awaiting_approval(): void
+    {
+        $customer = $this->customer();
+        $booking = $this->booking($customer, $this->bookableFixture());
+
+        $this->withoutVite()->actingAs($customer)->get(route('bookings.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('bookings.0.financial_status_label', 'Payment not due yet'));
+        $this->withoutVite()->actingAs($customer)->get(route('bookings.show', $booking))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('booking.financial_status_label', 'Payment not due yet'));
+        $this->assertSame(FinancialStatus::NotDue, $booking->fresh()->financial_status);
+        $this->assertSame(BookingStatus::Requested, $booking->fresh()->status);
+    }
+
     public function test_customer_can_view_owned_booking_detail_with_safe_history_and_recurring_context(): void
     {
         $customer = $this->customer();

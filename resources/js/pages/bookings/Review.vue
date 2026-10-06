@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import BookingConfirmation from '@/components/BookingConfirmation.vue';
 import BookingFrequencyChoice from '@/components/BookingFrequencyChoice.vue';
+import BookingOwnerChoice from '@/components/BookingOwnerChoice.vue';
 import BookingSummary from '@/components/BookingSummary.vue';
 import RecurringBookingConfirmation from '@/components/RecurringBookingConfirmation.vue';
 import RecurringBookingReview from '@/components/RecurringBookingReview.vue';
@@ -23,11 +24,13 @@ import {
     canStartBookingSubmission,
     isBookingSubmissionResponse,
     sendBookingRequest,
+    withBookingOrganisation,
 } from '@/lib/booking';
 import { dashboard } from '@/routes';
 import { index as availabilityIndex } from '@/routes/availability';
 import type {
     BookingCustomer,
+    BookingOrganisationContext,
     BookingReviewQuote,
     BookingReviewSelection,
     BookingSubmissionResponse,
@@ -39,10 +42,12 @@ const props = defineProps<{
     selection: BookingReviewSelection;
     quote: BookingReviewQuote;
     customer: BookingCustomer;
+    bookingContexts: BookingOrganisationContext[];
     recurrence: RecurrenceConstraints;
 }>();
 
 const bookingType = ref<'one_off' | 'recurring'>('one_off');
+const organisationId = ref<number | null>(null);
 const isSubmitting = ref(false);
 const submitError = ref('');
 const confirmation = ref<BookingSubmissionResponse['data'] | null>(null);
@@ -77,7 +82,10 @@ async function submitBookingRequest(): Promise<void> {
     submitError.value = '';
     try {
         const response = await sendBookingRequest(
-            bookingSubmissionPayload(props.selection),
+            withBookingOrganisation(
+                bookingSubmissionPayload(props.selection),
+                organisationId.value,
+            ),
             csrfToken(),
         );
         const payload: unknown = await response.json();
@@ -193,6 +201,13 @@ async function submitBookingRequest(): Promise<void> {
                     </p>
                 </header>
 
+                <BookingOwnerChoice
+                    v-if="bookingContexts.length > 0"
+                    v-model="organisationId"
+                    :customer="customer"
+                    :contexts="bookingContexts"
+                />
+
                 <BookingFrequencyChoice v-model="bookingType" />
 
                 <BookingSummary
@@ -263,6 +278,7 @@ async function submitBookingRequest(): Promise<void> {
                     v-else
                     :selection="selection"
                     :recurrence="recurrence"
+                    :organisation-id="organisationId"
                     @confirmed="recurringConfirmation = $event"
                 />
             </template>

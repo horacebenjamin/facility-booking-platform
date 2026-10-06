@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Booking;
 use App\Models\CustomerInvoiceTerms;
+use App\Models\Organisation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -20,8 +21,10 @@ class SetCustomerInvoiceTerms
             $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
             Gate::forUser($actor)->authorize('manageInvoiceTerms', $booking);
             User::query()->lockForUpdate()->findOrFail($booking->customer_id);
-            $terms = CustomerInvoiceTerms::query()->where('customer_id', $booking->customer_id)
-                ->where('centre_id', $booking->centre_id)->lockForUpdate()->first();
+            if ($booking->organisation_id !== null) {
+                Organisation::query()->lockForUpdate()->findOrFail($booking->organisation_id);
+            }
+            $terms = CustomerInvoiceTerms::query()->responsibleFor($booking)->lockForUpdate()->first();
             $before = $terms === null ? null : ['enabled' => $terms->enabled, 'term_days' => $terms->term_days];
 
             if ($terms !== null && $terms->enabled === $enabled && $terms->term_days === $termDays) {
@@ -30,12 +33,17 @@ class SetCustomerInvoiceTerms
 
             $attributes = ['enabled' => $enabled, 'term_days' => $termDays, 'authorised_by' => $actor->id, 'authorised_at' => now()];
             if ($terms === null) {
-                $terms = CustomerInvoiceTerms::query()->create(['customer_id' => $booking->customer_id, 'centre_id' => $booking->centre_id, ...$attributes]);
+                $terms = CustomerInvoiceTerms::query()->create([
+                    'customer_id' => $booking->organisation_id === null ? $booking->customer_id : null,
+                    'organisation_id' => $booking->organisation_id,
+                    'centre_id' => $booking->centre_id,
+                    ...$attributes,
+                ]);
             } else {
                 $terms->update($attributes);
             }
             activity('invoice')->performedOn($terms)->causedBy($actor)->event('invoice.terms_changed')
-                ->withProperties(['customer_id' => $booking->customer_id, 'centre_id' => $booking->centre_id, 'before' => $before, 'after' => ['enabled' => $enabled, 'term_days' => $termDays]])
+                ->withProperties(['customer_id' => $booking->customer_id, 'organisation_id' => $booking->organisation_id, 'centre_id' => $booking->centre_id, 'before' => $before, 'after' => ['enabled' => $enabled, 'term_days' => $termDays]])
                 ->log('Customer invoice terms authorised');
 
             return $terms;
