@@ -2068,7 +2068,9 @@ Define metrics centrally.
 
 Use focused report services/query objects.
 
-Use Laravel Excel for appropriate exports.
+Use Filament's native export system (OpenSpout-backed) for management
+XLSX/CSV exports. Introduce Laravel Excel only if advanced spreadsheet
+features are later required.
 
 Queue larger exports.
 

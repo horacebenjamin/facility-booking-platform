@@ -1165,7 +1165,8 @@ The initial reporting architecture should use:
 -   MySQL;
 -   focused reporting/query Services;
 -   Filament widgets/tables;
--   Laravel Excel for appropriate exports.
+-   Filament's native export system (OpenSpout-backed) for management
+    XLSX/CSV exports.
 
 Do not introduce a data warehouse, Elasticsearch or separate analytics
 platform without measured need.
@@ -1200,7 +1201,14 @@ confirmed booking value in another without explicit distinction.
 
 ### 21.3 Exports
 
-Laravel Excel may consume the same reporting/query logic.
+Management exports use Filament's native exporter infrastructure, with
+OpenSpout providing spreadsheet generation underneath. Exporters consume
+the same scoped reporting/query logic as the on-screen reports.
+
+This avoids adding another dependency for the current reporting
+requirements. Laravel Excel may be introduced later only if requirements
+expand to advanced workbook features such as complex styling, formulas,
+multiple worksheets or advanced imports.
 
 Large exports should be queued and stored privately.
 
