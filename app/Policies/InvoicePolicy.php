@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Invoice;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 
 class InvoicePolicy
 {
@@ -43,7 +42,8 @@ class InvoicePolicy
 
     private function hasCentreScope(User $user, Invoice $invoice): bool
     {
-        return $invoice->lines()->exists() && ! $invoice->lines()->whereHas('booking', fn (Builder $query): Builder => $query
-            ->whereNotIn('centre_id', $user->assignedCentres()->select('centres.id')))->exists();
+        $centreIds = array_values($user->assignedCentres()->pluck('centres.id')->map(fn (int $id): int => $id)->all());
+
+        return Invoice::query()->whereKey($invoice->id)->scopedToCentres($centreIds)->exists();
     }
 }

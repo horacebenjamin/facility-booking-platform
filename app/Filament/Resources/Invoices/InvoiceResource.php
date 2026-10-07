@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Invoices;
 use App\Enums\InvoiceStatus;
 use App\Filament\Resources\Invoices\Pages\ListInvoices;
 use App\Filament\Resources\Invoices\Pages\ViewInvoice;
+use App\Models\Centre;
 use App\Models\Invoice;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -75,15 +76,23 @@ class InvoiceResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['customer', 'organisation', 'lines.booking.centre', 'activities.causer'])
-            ->whereHas('lines')
-            ->whereDoesntHave('lines.booking', fn (Builder $query): Builder => $query
-                ->whereDoesntHave('centre.assignedUsers', fn (Builder $users): Builder => $users->whereKey(auth()->id())));
+            ->whereIn('id', Invoice::query()->scopedToCentres(self::assignedCentreIds())->select('id'))
+            ->with(['customer', 'organisation', 'lines.booking.centre', 'activities.causer']);
     }
 
     public static function getPages(): array
     {
         return ['index' => ListInvoices::route('/'), 'view' => ViewInvoice::route('/{record}')];
+    }
+
+    /** @return list<int> */
+    private static function assignedCentreIds(): array
+    {
+        return array_values(Centre::query()
+            ->whereHas('assignedUsers', fn (Builder $query) => $query->whereKey(auth()->id()))
+            ->pluck('id')
+            ->map(fn (int $id): int => $id)
+            ->all());
     }
 
     private static function formatAmount(int $amountMinor, string $currency): string

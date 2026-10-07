@@ -66,7 +66,7 @@ class CustomerInvoiceController extends Controller
             'currency' => $invoice->currency,
             'total_minor' => $invoice->total_minor,
             'outstanding_minor' => $invoice->status === InvoiceStatus::Paid ? 0 : $invoice->total_minor,
-            'overdue' => $invoice->status !== InvoiceStatus::Paid && $invoice->due_date->endOfDay()->isPast(),
+            'overdue' => $invoice->isOverdue(),
         ];
     }
 }

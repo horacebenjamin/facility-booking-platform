@@ -6,11 +6,14 @@ use App\Enums\InvoiceStatus;
 use Carbon\CarbonInterface;
 use Database\Factories\InvoiceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Carbon;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -61,6 +64,35 @@ class Invoice extends Model
     public function activities(): MorphMany
     {
         return $this->morphMany(Activity::class, 'subject');
+    }
+
+    public function isOverdue(?Carbon $at = null): bool
+    {
+        return $this->status !== InvoiceStatus::Paid
+            && $this->due_date->endOfDay()->lt($at ?? Carbon::now(config('app.timezone')));
+    }
+
+    /**
+     * @param  Builder<Invoice>  $query
+     */
+    #[Scope]
+    protected function overdue(Builder $query, ?Carbon $at = null): void
+    {
+        $query
+            ->where('status', '!=', InvoiceStatus::Paid)
+            ->where('due_date', '<', ($at ?? Carbon::now(config('app.timezone')))->toDateString());
+    }
+
+    /**
+     * @param  Builder<Invoice>  $query
+     * @param  list<int>  $centreIds
+     */
+    #[Scope]
+    protected function scopedToCentres(Builder $query, array $centreIds): void
+    {
+        $query
+            ->whereHas('lines.booking')
+            ->whereDoesntHave('lines.booking', fn (Builder $bookings): Builder => $bookings->whereNotIn('centre_id', $centreIds));
     }
 
     /** @return array<string, string> */
