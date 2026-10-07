@@ -29,6 +29,7 @@ class ManagementPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/management/theme.css')
             ->login()
             ->brandName('Facility4Hire Management')
+            ->databaseNotifications()
             ->colors([
                 'primary' => Color::Amber,
             ])

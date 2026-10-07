@@ -32,12 +32,15 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemRoleSeeder;
 use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 class ManagementDashboardTest extends TestCase
 {
+    use LazilyRefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
