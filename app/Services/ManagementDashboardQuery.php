@@ -48,7 +48,7 @@ class ManagementDashboardQuery
         $canViewIncidents = Gate::forUser($manager)->allows('viewAny', Incident::class);
         $canViewClosures = Gate::forUser($manager)->allows('viewAny', AvailabilityBlock::class);
         $today = CarbonImmutable::now(config('app.timezone'));
-        $localToday = CarbonImmutable::now('Europe/London');
+        $localToday = CarbonImmutable::now((string) config('booking.local_timezone'));
         $localDayStart = $localToday->startOfDay();
         $dayStart = $localDayStart->utc();
         $dayEnd = $localDayStart->addDay()->utc();

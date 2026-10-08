@@ -51,8 +51,8 @@ class BookingResource extends Resource
                     ->description(fn (Booking $record): ?string => $record->series === null
                         ? null
                         : "Occurrence {$record->occurrence_index} of {$record->series->occurrence_count}"),
-                TextColumn::make('starts_at')->label('Requested time')->dateTime('j M Y, H:i')->sortable(),
-                TextColumn::make('ends_at')->label('Ends')->dateTime('H:i'),
+                TextColumn::make('starts_at')->label('Requested time')->dateTime('j M Y, H:i', (string) config('booking.local_timezone'))->sortable(),
+                TextColumn::make('ends_at')->label('Ends')->dateTime('H:i', (string) config('booking.local_timezone')),
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn (BookingStatus $state): string => $state->label()),
@@ -61,7 +61,7 @@ class BookingResource extends Resource
                     ->formatStateUsing(fn (?int $state): string => self::formatMinor($state)),
                 TextColumn::make('allocationOccupancy.expires_at')
                     ->label('Provisional protection')
-                    ->dateTime('j M Y, H:i')
+                    ->dateTime('j M Y, H:i', (string) config('booking.local_timezone'))
                     ->placeholder('Missing')
                     ->description(fn (?CarbonInterface $state): string => match (true) {
                         $state === null => 'Protection is missing',
@@ -83,12 +83,18 @@ class BookingResource extends Resource
                 TextEntry::make('attendance_state')->label('Attendance state')->badge()->formatStateUsing(fn (AttendanceState $state): string => $state->label()),
                 TextEntry::make('allocationOccupancy.expires_at')
                     ->label('Provisional protection expires')
-                    ->dateTime('j M Y, H:i')
+                    ->dateTime('j M Y, H:i', (string) config('booking.local_timezone'))
                     ->placeholder('Protection is missing')
                     ->visible(fn (Booking $record): bool => $record->status === BookingStatus::Requested)
                     ->helperText(fn (?CarbonInterface $state): string => $state?->isFuture()
                         ? 'Protection is active and will be revalidated before approval.'
                         : 'Protection is expired or missing. Approval is unavailable.'),
+                TextEntry::make('internal_staff_note')
+                    ->label('Internal staff note')
+                    ->state(fn (Booking $record): ?string => $record->latestStaffNote())
+                    ->helperText('Visible to staff only.')
+                    ->visible(fn (Booking $record): bool => $record->latestStaffNote() !== null)
+                    ->columnSpanFull(),
             ])->columns(2),
             Section::make('Customer and venue')->schema([
                 TextEntry::make('customer.name')->label('Customer'),
@@ -103,8 +109,8 @@ class BookingResource extends Resource
                 TextEntry::make('centre.name')->label('Centre'),
                 TextEntry::make('facility.name')->label('Facility'),
                 TextEntry::make('resource.name')->label('Resource'),
-                TextEntry::make('starts_at')->label('Starts')->dateTime('j M Y, H:i'),
-                TextEntry::make('ends_at')->label('Ends')->dateTime('j M Y, H:i'),
+                TextEntry::make('starts_at')->label('Starts')->dateTime('j M Y, H:i', (string) config('booking.local_timezone')),
+                TextEntry::make('ends_at')->label('Ends')->dateTime('j M Y, H:i', (string) config('booking.local_timezone')),
             ])->columns(2),
             Section::make('Recurring series')
                 ->visible(fn (Booking $record): bool => $record->series !== null)
@@ -122,7 +128,7 @@ class BookingResource extends Resource
                         ->schema([
                             TextEntry::make('occurrence_index')->label('Occurrence'),
                             TextEntry::make('reference')->label('Booking reference'),
-                            TextEntry::make('starts_at')->label('Starts')->dateTime('j M Y, H:i'),
+                            TextEntry::make('starts_at')->label('Starts')->dateTime('j M Y, H:i', (string) config('booking.local_timezone')),
                             TextEntry::make('status')->label('State')->badge()->formatStateUsing(fn (BookingStatus $state): string => $state->label()),
                         ])
                         ->contained(false)
@@ -159,7 +165,7 @@ class BookingResource extends Resource
                 RepeatableEntry::make('activities')
                     ->label('History')
                     ->schema([
-                        TextEntry::make('created_at')->label('When')->dateTime('j M Y, H:i'),
+                        TextEntry::make('created_at')->label('When')->dateTime('j M Y, H:i', (string) config('booking.local_timezone')),
                         TextEntry::make('event')->label('Action'),
                         TextEntry::make('causer.name')->label('Actor')->placeholder('System'),
                         TextEntry::make('properties.reason')->label('Rejection reason')->placeholder('—'),

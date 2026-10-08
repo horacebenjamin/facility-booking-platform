@@ -41,6 +41,7 @@ class SystemRoleSeederTest extends TestCase
             'incidents.manage',
             'pricing.manage',
             'reports.view',
+            'organisations.onboard',
         ],
         'leisure-assistant' => [
             'bookings.view',
@@ -55,7 +56,7 @@ class SystemRoleSeederTest extends TestCase
         $this->seed(SystemRoleSeeder::class);
 
         $this->assertDatabaseCount('roles', 3);
-        $this->assertDatabaseCount('permissions', 17);
+        $this->assertDatabaseCount('permissions', 18);
 
         $this->assertDatabaseHas('roles', ['name' => 'customer', 'guard_name' => 'web']);
         $this->assertDatabaseHas('roles', ['name' => 'manager', 'guard_name' => 'web']);
@@ -73,6 +74,7 @@ class SystemRoleSeederTest extends TestCase
             'incidents.manage',
             'invoices.manage',
             'invoices.view',
+            'organisations.onboard',
             'payments.initiate',
             'payments.record',
             'payments.refund',
@@ -147,10 +149,10 @@ class SystemRoleSeederTest extends TestCase
         $this->seed(SystemRoleSeeder::class);
 
         $this->assertDatabaseCount('roles', 3);
-        $this->assertDatabaseCount('permissions', 17);
+        $this->assertDatabaseCount('permissions', 18);
         $this->assertSame(5, Role::findByName('customer')->permissions()->count());
-        $this->assertSame(16, Role::findByName('manager')->permissions()->count());
+        $this->assertSame(17, Role::findByName('manager')->permissions()->count());
         $this->assertSame(4, Role::findByName('leisure-assistant')->permissions()->count());
-        $this->assertSame(17, Permission::query()->count());
+        $this->assertSame(18, Permission::query()->count());
     }
 }

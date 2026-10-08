@@ -11,8 +11,8 @@ use App\Http\Requests\AmendBookingRequest;
 use App\Http\Requests\CancelBookingRequest;
 use App\Models\Booking;
 use App\Models\User;
+use App\Services\BookingDateTime;
 use App\Services\CustomerBookingPresenter;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -98,8 +98,8 @@ class CustomerBookingController extends Controller
                 actor: $customer,
                 booking: $booking,
                 resourceId: (int) ($data['resource_id'] ?? $booking->resource_id),
-                startsAt: CarbonImmutable::parse($data['starts_at'], config('app.timezone')),
-                endsAt: CarbonImmutable::parse($data['ends_at'], config('app.timezone')),
+                startsAt: BookingDateTime::fromLocalInput($data['starts_at']),
+                endsAt: BookingDateTime::fromLocalInput($data['ends_at']),
                 scope: $data['scope'],
             );
         } catch (BookingLifecycleTransitionUnavailable|BookingSubmissionUnavailable $exception) {

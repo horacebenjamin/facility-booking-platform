@@ -26,6 +26,7 @@ use Database\Seeders\SystemRoleSeeder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class MySqlBookingSubmissionTest extends TestCase
@@ -78,12 +79,44 @@ class MySqlBookingSubmissionTest extends TestCase
         $this->assertSame(2, BookingPriceLine::query()->count());
         $this->assertSame($booking->id, $occupancy->booking_id);
         $this->assertSame(['A', 'B'], $occupancy->allocationUnits()->orderBy('code')->pluck('code')->all());
-        $this->assertSame('2026-10-05 17:45:00', $occupancy->starts_at->toDateTimeString());
-        $this->assertSame('2026-10-05 19:45:00', $occupancy->ends_at->toDateTimeString());
+        $this->assertSame('2026-10-05 16:45:00', $occupancy->starts_at->toDateTimeString());
+        $this->assertSame('2026-10-05 18:45:00', $occupancy->ends_at->toDateTimeString());
         $this->assertSame('2026-10-03 12:00:00', $occupancy->expires_at?->toDateTimeString());
         $this->assertSame($booking->id, $equipmentAllocation->booking_id);
         $this->assertSame($equipmentRequest->id, $equipmentAllocation->booking_equipment_id);
         $this->assertSame('2026-10-03 12:00:00', $equipmentAllocation->expires_at?->toDateTimeString());
+    }
+
+    #[DataProvider('localBookingPeriods')]
+    public function test_customer_local_booking_input_is_persisted_as_the_correct_utc_instant(
+        string $startsAt,
+        string $endsAt,
+        string $expectedUtcStartsAt,
+        string $expectedUtcEndsAt,
+    ): void {
+        $fixture = $this->bookableFixture();
+        $customer = $this->customer();
+        $payload = $this->payload($fixture['resource']);
+        $payload['starts_at'] = $startsAt;
+        $payload['ends_at'] = $endsAt;
+
+        $this->actingAs($customer)
+            ->postJson(route('bookings.store'), $payload)
+            ->assertCreated();
+
+        $booking = Booking::query()->sole();
+
+        $this->assertSame($expectedUtcStartsAt, $booking->starts_at->utc()->toDateTimeString());
+        $this->assertSame($expectedUtcEndsAt, $booking->ends_at->utc()->toDateTimeString());
+    }
+
+    /** @return array<string, array{string, string, string, string}> */
+    public static function localBookingPeriods(): array
+    {
+        return [
+            'BST' => ['2026-10-05 18:00:00', '2026-10-05 19:00:00', '2026-10-05 17:00:00', '2026-10-05 18:00:00'],
+            'GMT' => ['2027-01-04 18:00:00', '2027-01-04 19:00:00', '2027-01-04 18:00:00', '2027-01-04 19:00:00'],
+        ];
     }
 
     public function test_resource_unavailability_after_an_earlier_check_fails_without_persisting_a_partial_booking(): void

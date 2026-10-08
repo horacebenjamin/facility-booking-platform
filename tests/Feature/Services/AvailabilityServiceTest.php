@@ -363,10 +363,10 @@ class AvailabilityServiceTest extends TestCase
     {
         return $this->service->check(
             $resource,
-            $this->at($startsAt),
-            $this->at($endsAt),
+            $this->localBookingTimeAsUtcInstant($startsAt),
+            $this->localBookingTimeAsUtcInstant($endsAt),
             $equipmentRequirements,
-            $this->at('2026-10-01 12:00:00'),
+            CarbonImmutable::parse('2026-10-01 12:00:00', 'UTC'),
         );
     }
 
@@ -381,8 +381,8 @@ class AvailabilityServiceTest extends TestCase
     private function occupy(AllocationUnit $unit, string $startsAt = '2026-10-05 18:00:00', string $endsAt = '2026-10-05 19:00:00', ?string $expiresAt = null): AllocationOccupancy
     {
         $occupancy = AllocationOccupancy::factory()->create([
-            'starts_at' => $startsAt,
-            'ends_at' => $endsAt,
+            'starts_at' => $this->localBookingTimeAsUtcInstant($startsAt)->toDateTimeString(),
+            'ends_at' => $this->localBookingTimeAsUtcInstant($endsAt)->toDateTimeString(),
             'expires_at' => $expiresAt,
         ]);
         $occupancy->allocationUnits()->attach($unit);
@@ -396,8 +396,8 @@ class AvailabilityServiceTest extends TestCase
     private function periodAttributes(): array
     {
         return [
-            'starts_at' => '2026-10-05 18:00:00',
-            'ends_at' => '2026-10-05 19:00:00',
+            'starts_at' => $this->localBookingTimeAsUtcInstant('2026-10-05 18:00:00')->toDateTimeString(),
+            'ends_at' => $this->localBookingTimeAsUtcInstant('2026-10-05 19:00:00')->toDateTimeString(),
         ];
     }
 
@@ -413,8 +413,8 @@ class AvailabilityServiceTest extends TestCase
         $this->assertSame($reasons, $result->reasons());
     }
 
-    private function at(string $dateTime): CarbonImmutable
+    private function localBookingTimeAsUtcInstant(string $dateTime): CarbonImmutable
     {
-        return CarbonImmutable::parse($dateTime, config('app.timezone'));
+        return CarbonImmutable::parse($dateTime, (string) config('booking.local_timezone'))->utc();
     }
 }

@@ -21,6 +21,7 @@ import {
     bookingSelectionKey,
     canContinueToBooking,
 } from '@/lib/booking';
+import { bookingWallClockMinutes } from '@/lib/bookingDateTime';
 import { check as checkAvailability } from '@/routes/availability';
 import { review as reviewBooking } from '@/routes/bookings';
 import { quote as quotePricing } from '@/routes/pricing';
@@ -204,9 +205,11 @@ const duration = computed(() => {
         return null;
     }
 
-    const start = new Date(`${selectedDate.value}T${startsAt.value}`);
-    const end = new Date(`${selectedDate.value}T${endsAt.value}`);
-    const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+    const minutes = bookingWallClockMinutes(
+        selectedDate.value,
+        startsAt.value,
+        endsAt.value,
+    );
 
     if (!Number.isFinite(minutes) || minutes <= 0) {
         return null;

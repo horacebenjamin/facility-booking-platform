@@ -39,6 +39,7 @@ class CustomerNotificationTest extends TestCase
         $this->withoutVite()->actingAs($customer)->get(route('notifications.index'))
             ->assertInertia(fn (Assert $page) => $page->component('notifications/Index')
                 ->has('notifications.data', 1)->where('notifications.data.0.id', $owned->id)
+                ->where('bookingTimezone', 'Europe/London')
                 ->where('notifications.data.0.title', 'Booking requested')
                 ->where('notifications.data.0.body', 'Your booking is awaiting review.')
                 ->where('notifications.data.0.action_url', '/bookings')

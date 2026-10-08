@@ -178,6 +178,34 @@ class BookableHoursEvaluatorTest extends TestCase
         $this->assertTrue($containsRequest);
     }
 
+    public function test_bst_request_at_six_pm_is_checked_as_six_pm_local_time(): void
+    {
+        $facility = $this->facilityWithMondayHours();
+
+        $containsRequest = $this->evaluator->facilityContainsRequest(
+            $facility,
+            $this->at('2026-10-05 18:00:00'),
+            $this->at('2026-10-05 19:00:00'),
+        );
+
+        $this->assertTrue($containsRequest);
+        $this->assertSame('2026-10-05 17:00:00', $this->at('2026-10-05 18:00:00')->toDateTimeString());
+    }
+
+    public function test_gmt_request_at_six_pm_is_checked_as_six_pm_local_time(): void
+    {
+        $facility = $this->facilityWithMondayHours();
+
+        $containsRequest = $this->evaluator->facilityContainsRequest(
+            $facility,
+            $this->at('2027-01-04 18:00:00'),
+            $this->at('2027-01-04 19:00:00'),
+        );
+
+        $this->assertTrue($containsRequest);
+        $this->assertSame('2027-01-04 18:00:00', $this->at('2027-01-04 18:00:00')->toDateTimeString());
+    }
+
     private function facilityWithMondayHours(): Facility
     {
         $facility = Facility::factory()->create();
@@ -192,6 +220,7 @@ class BookableHoursEvaluatorTest extends TestCase
 
     private function at(string $dateTime): CarbonImmutable
     {
-        return CarbonImmutable::parse($dateTime, config('app.timezone'));
+        return CarbonImmutable::parse($dateTime, config('booking.local_timezone'))
+            ->setTimezone(config('app.timezone'));
     }
 }

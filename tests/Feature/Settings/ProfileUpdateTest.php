@@ -98,6 +98,72 @@ class ProfileUpdateTest extends TestCase
         $this->assertDatabaseEmpty('activity_log');
     }
 
+    public function test_customer_can_save_a_valid_phone_number(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => '+44 7700 900123',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertSame('+44 7700 900123', $user->refresh()->phone);
+        $this->assertSame(['changed_fields' => ['phone']], Activity::query()->sole()->properties?->all());
+    }
+
+    public function test_invalid_phone_number_is_rejected(): void
+    {
+        $user = User::factory()->create(['phone' => '07700 900123']);
+
+        $this->actingAs($user)
+            ->from(route('profile.edit'))
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => 'call me',
+            ])
+            ->assertSessionHasErrors(['phone' => 'Enter a valid phone number, for example 07700 900123.'])
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertSame('07700 900123', $user->refresh()->phone);
+    }
+
+    public function test_phone_number_can_be_cleared(): void
+    {
+        $user = User::factory()->create(['phone' => '07700 900123']);
+
+        $this->actingAs($user)
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => '',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($user->refresh()->phone);
+    }
+
+    public function test_updating_other_profile_fields_without_a_phone_keeps_the_existing_phone(): void
+    {
+        $user = User::factory()->create(['phone' => '07700 900123']);
+
+        $this->actingAs($user)
+            ->patch(route('profile.update'), [
+                'name' => 'Renamed User',
+                'email' => $user->email,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $user->refresh();
+
+        $this->assertSame('Renamed User', $user->name);
+        $this->assertSame('07700 900123', $user->phone);
+    }
+
     public function test_user_can_delete_their_account()
     {
         $user = User::factory()->create();

@@ -63,8 +63,8 @@ class BookableHoursEvaluator
      */
     private function normaliseRequestedPeriod(CarbonInterface $startsAt, CarbonInterface $endsAt): ?array
     {
-        $startsAt = CarbonImmutable::instance($startsAt)->setTimezone(config('app.timezone'));
-        $endsAt = CarbonImmutable::instance($endsAt)->setTimezone(config('app.timezone'));
+        $startsAt = BookingDateTime::inLocalTimezone($startsAt);
+        $endsAt = BookingDateTime::inLocalTimezone($endsAt);
 
         if (! $startsAt->lt($endsAt) || ! $startsAt->isSameDay($endsAt)) {
             return null;

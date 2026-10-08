@@ -32,7 +32,7 @@ trait FormatsReportExportValues
 
     protected static function localDateTime(?CarbonInterface $value): string
     {
-        return $value?->setTimezone(ReportFilters::TIMEZONE)->format('Y-m-d H:i') ?? '';
+        return $value?->setTimezone(ReportFilters::timezone())->format('Y-m-d H:i') ?? '';
     }
 
     protected static function majorUnits(?int $amountMinor): string

@@ -86,6 +86,7 @@ class CustomerBookingManagementTest extends TestCase
                 ->component('bookings/Index')
                 ->has('bookings', 6)
                 ->where('bookings.0.status', 'rejected')
+                ->where('bookingTimezone', 'Europe/London')
                 ->where('bookings.1.status', 'cancelled')
                 ->where('bookings.2.status', 'completed')
                 ->where('bookings.3.status', 'confirmed')
@@ -153,6 +154,21 @@ class CustomerBookingManagementTest extends TestCase
                 ->missing('booking.history.0.staff_note')
                 ->missing('booking.activities')
                 ->missing('booking.payments'));
+    }
+
+    public function test_customer_booking_detail_keeps_utc_instants_and_shares_the_local_display_timezone(): void
+    {
+        $customer = $this->customer();
+        $booking = $this->booking($customer, $this->bookableFixture(), [
+            'starts_at' => '2026-10-05 17:00:00',
+            'ends_at' => '2026-10-05 18:00:00',
+        ]);
+
+        $this->withoutVite()->actingAs($customer)->get(route('bookings.show', $booking))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('bookingTimezone', 'Europe/London')
+                ->where('booking.starts_at', '2026-10-05T17:00:00+00:00')
+                ->where('booking.ends_at', '2026-10-05T18:00:00+00:00'));
     }
 
     public function test_customer_cannot_view_or_mutate_another_customers_booking_by_id(): void
@@ -241,13 +257,13 @@ class CustomerBookingManagementTest extends TestCase
         $booking = app(CreateBookingRequest::class)->handle(
             $customer,
             $fixture['resource']->id,
+            CarbonImmutable::parse('2026-10-05 17:00:00'),
             CarbonImmutable::parse('2026-10-05 18:00:00'),
-            CarbonImmutable::parse('2026-10-05 19:00:00'),
         );
 
         $conflict = AllocationOccupancy::factory()->create([
-            'starts_at' => '2026-10-05 19:00:00',
-            'ends_at' => '2026-10-05 20:00:00',
+            'starts_at' => '2026-10-05 18:00:00',
+            'ends_at' => '2026-10-05 19:00:00',
             'expires_at' => null,
         ]);
         $conflict->allocationUnits()->attach($fixture['unit']->id);
@@ -259,7 +275,7 @@ class CustomerBookingManagementTest extends TestCase
             'ends_at' => '2026-10-05 20:00:00',
         ])->assertRedirect()->assertSessionHasErrors('booking');
 
-        $this->assertSame('2026-10-05 18:00:00', $booking->fresh()->starts_at->toDateTimeString());
+        $this->assertSame('2026-10-05 17:00:00', $booking->fresh()->starts_at->toDateTimeString());
         $this->assertSame($originalSnapshotId, $booking->fresh()->priceSnapshot->id);
         $this->assertDatabaseMissing('activity_log', ['event' => 'booking.amended']);
     }
@@ -271,8 +287,8 @@ class CustomerBookingManagementTest extends TestCase
         $booking = app(CreateBookingRequest::class)->handle(
             $customer,
             $fixture['resource']->id,
+            CarbonImmutable::parse('2026-10-05 17:00:00'),
             CarbonImmutable::parse('2026-10-05 18:00:00'),
-            CarbonImmutable::parse('2026-10-05 19:00:00'),
         );
 
         $this->actingAs($customer)->patch(route('bookings.amend', $booking), [
@@ -282,9 +298,9 @@ class CustomerBookingManagementTest extends TestCase
         ])->assertRedirect(route('bookings.show', $booking));
 
         $amended = $booking->fresh();
-        $this->assertSame('2026-10-05 19:00:00', $amended->starts_at->toDateTimeString());
-        $this->assertSame('2026-10-05 20:00:00', $amended->ends_at->toDateTimeString());
-        $this->assertSame('2026-10-05 19:00:00', $amended->allocationOccupancy->starts_at->toDateTimeString());
+        $this->assertSame('2026-10-05 18:00:00', $amended->starts_at->toDateTimeString());
+        $this->assertSame('2026-10-05 19:00:00', $amended->ends_at->toDateTimeString());
+        $this->assertSame('2026-10-05 18:00:00', $amended->allocationOccupancy->starts_at->toDateTimeString());
         $this->assertSame(1, BookingPriceSnapshot::query()->where('booking_id', $booking->id)->count());
         $this->assertSame(1, Activity::query()->where('subject_id', $booking->id)->where('event', 'booking.amended')->count());
     }

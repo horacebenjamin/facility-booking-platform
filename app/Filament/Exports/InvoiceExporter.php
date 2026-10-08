@@ -24,7 +24,7 @@ class InvoiceExporter extends Exporter
             ExportColumn::make('due_date')->label('Due date')->formatStateUsing(fn ($state): string => $state?->toDateString() ?? ''),
             ExportColumn::make('status')->label('Status')->formatStateUsing(fn ($state): string => $state->label()),
             ExportColumn::make('overdue')->label('Overdue')->state(fn (Invoice $record): string => $record->status === InvoiceStatus::Issued && $record->isOverdue() ? 'Yes' : 'No'),
-            ExportColumn::make('paid_at')->label('Paid (Europe/London)')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
+            ExportColumn::make('paid_at')->label('Paid ('.config('booking.local_timezone').')')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
             ExportColumn::make('centres')->label('Centre')->state(fn (Invoice $record): string => $record->lines->map(fn ($line) => $line->booking?->centre->name)->filter()->unique()->sort()->implode(', ')),
             ...static::ownershipColumns(fn (Invoice $record) => $record->organisation, fn (Invoice $record) => $record->customer),
             ExportColumn::make('currency')->label('Currency'),

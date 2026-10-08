@@ -19,8 +19,8 @@ class BookingExporter extends Exporter
     {
         return [
             ExportColumn::make('reference')->label('Booking reference'),
-            ExportColumn::make('starts_at')->label('Starts (Europe/London)')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
-            ExportColumn::make('ends_at')->label('Ends (Europe/London)')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
+            ExportColumn::make('starts_at')->label('Starts ('.config('booking.local_timezone').')')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
+            ExportColumn::make('ends_at')->label('Ends ('.config('booking.local_timezone').')')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
             ExportColumn::make('status')->label('Status')->formatStateUsing(fn ($state): string => $state->label()),
             ExportColumn::make('attendance_state')->label('Attendance')->formatStateUsing(fn ($state): string => $state->label()),
             ExportColumn::make('centre.name')->label('Centre'),

@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatBookingDateTime } from '@/lib/bookingDateTime';
 import { index, read } from '@/routes/notifications';
 import type { NotificationPage } from '@/types/notification';
 
 defineProps<{ notifications: NotificationPage; unread_count: number }>();
+const page = usePage<{ bookingTimezone: string }>();
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Notifications', href: index() }] },
 });
 
 function timestamp(value: string): string {
-    return new Intl.DateTimeFormat('en-GB', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+    return formatBookingDateTime(value, page.props.bookingTimezone);
 }
 </script>
 

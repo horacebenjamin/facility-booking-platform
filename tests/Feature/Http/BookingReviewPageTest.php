@@ -57,6 +57,7 @@ class BookingReviewPageTest extends TestCase
                 ->where('selection.resource_name', 'Whole Hall')
                 ->where('selection.starts_at', '2026-10-05 18:00:00')
                 ->where('selection.ends_at', '2026-10-05 19:30:00')
+                ->where('bookingTimezone', 'Europe/London')
                 ->where('selection.duration_seconds', 5400)
                 ->where('selection.equipment', [[
                     'equipment_id' => $fixture['equipment']->id,

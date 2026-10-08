@@ -46,6 +46,9 @@ class Booking extends Model
     /** @use HasFactory<BookingFactory> */
     use HasFactory;
 
+    /** Audit event holding an internal staff note. Never presented to customers. */
+    public const string STAFF_NOTE_EVENT = 'booking.staff_note_recorded';
+
     /**
      * @return BelongsTo<User, $this>
      */
@@ -154,6 +157,18 @@ class Booking extends Model
     public function activities(): MorphMany
     {
         return $this->morphMany(Activity::class, 'subject');
+    }
+
+    /** The most recent internal staff note, for authorised staff views only. */
+    public function latestStaffNote(): ?string
+    {
+        $note = $this->activities
+            ->where('event', self::STAFF_NOTE_EVENT)
+            ->sortByDesc('id')
+            ->first()
+            ?->getProperty('note');
+
+        return is_string($note) ? $note : null;
     }
 
     /**

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import BookingPaymentStatus from '@/components/BookingPaymentStatus.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,7 @@ const props = defineProps<{
     booking: PaymentBooking;
     payment: PaymentSummary | null;
 }>();
+const page = usePage<{ bookingTimezone: string }>();
 
 const form = useForm<{ payment?: string }>({});
 
@@ -61,11 +62,11 @@ function formatAmount() {
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Starts</dt>
-                        <dd>{{ formatBookingDateTime(booking.starts_at) }}</dd>
+                        <dd>{{ formatBookingDateTime(booking.starts_at, page.props.bookingTimezone) }}</dd>
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Ends</dt>
-                        <dd>{{ formatBookingDateTime(booking.ends_at) }}</dd>
+                        <dd>{{ formatBookingDateTime(booking.ends_at, page.props.bookingTimezone) }}</dd>
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Booking total</dt>
@@ -76,7 +77,7 @@ function formatAmount() {
                     <div v-if="booking.payment_due_at">
                         <dt class="text-muted-foreground">Payment deadline</dt>
                         <dd>
-                            {{ formatBookingDateTime(booking.payment_due_at) }}
+                            {{ formatBookingDateTime(booking.payment_due_at, page.props.bookingTimezone) }}
                         </dd>
                     </div>
                 </dl>

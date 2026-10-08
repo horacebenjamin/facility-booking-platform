@@ -8,6 +8,11 @@ use Illuminate\Validation\Rule;
 
 trait ProfileValidationRules
 {
+    /** UK and international numbers: digits with optional leading +, spaces, brackets, dots or dashes. */
+    public const string PHONE_PATTERN = '/^\+?[0-9][0-9 ().-]{5,30}$/';
+
+    public const string PHONE_FORMAT_MESSAGE = 'Enter a valid phone number, for example 07700 900123.';
+
     /**
      * Get the validation rules used to validate user profiles.
      *
@@ -47,5 +52,15 @@ trait ProfileValidationRules
                 ? Rule::unique(User::class)
                 : Rule::unique(User::class)->ignore($userId),
         ];
+    }
+
+    /**
+     * Get the validation rules used to validate optional contact phone numbers.
+     *
+     * @return array<int, ValidationRule|array<mixed>|string>
+     */
+    protected function phoneRules(): array
+    {
+        return ['nullable', 'string', 'max:32', 'regex:'.self::PHONE_PATTERN];
     }
 }

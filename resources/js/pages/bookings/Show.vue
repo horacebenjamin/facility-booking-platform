@@ -17,7 +17,10 @@ import {
 } from '@/routes/bookings';
 import { show as showInvoice } from '@/routes/invoices';
 import { show as showPayment } from '@/routes/bookings/payment';
-import { formatBookingDateTime } from '@/lib/bookingDateTime';
+import {
+    bookingLocalInput,
+    formatBookingDateTime,
+} from '@/lib/bookingDateTime';
 
 type HistoryEntry = {
     title: string;
@@ -71,10 +74,13 @@ const props = defineProps<{
     };
 }>();
 
-const page = usePage<{ flash?: { success?: string } }>();
+const page = usePage<{
+    bookingTimezone: string;
+    flash?: { success?: string };
+}>();
 
 function localInput(value: string): string {
-    return value.slice(0, 16);
+    return bookingLocalInput(value, page.props.bookingTimezone);
 }
 </script>
 
@@ -129,12 +135,12 @@ function localInput(value: string): string {
                         <div>
                             <p class="text-muted-foreground">Starts</p>
                             <p>
-                                {{ formatBookingDateTime(booking.starts_at) }}
+                                {{ formatBookingDateTime(booking.starts_at, page.props.bookingTimezone) }}
                             </p>
                         </div>
                         <div>
                             <p class="text-muted-foreground">Ends</p>
-                            <p>{{ formatBookingDateTime(booking.ends_at) }}</p>
+                            <p>{{ formatBookingDateTime(booking.ends_at, page.props.bookingTimezone) }}</p>
                         </div>
                         <div>
                             <p class="text-muted-foreground">Financial state</p>
@@ -161,9 +167,7 @@ function localInput(value: string): string {
                             </p>
                             <p>
                                 {{
-                                    formatBookingDateTime(
-                                        booking.payment_due_at,
-                                    )
+                                    formatBookingDateTime(booking.payment_due_at, page.props.bookingTimezone)
                                 }}
                             </p>
                         </div>
@@ -205,9 +209,7 @@ function localInput(value: string): string {
                                 <span
                                     >{{ occurrence.occurrence_index }} ·
                                     {{
-                                        formatBookingDateTime(
-                                            occurrence.starts_at,
-                                        )
+                                        formatBookingDateTime(occurrence.starts_at, page.props.bookingTimezone)
                                     }}</span
                                 >
                                 <span class="text-muted-foreground">{{
@@ -247,9 +249,7 @@ function localInput(value: string): string {
                                 <time
                                     class="text-xs text-muted-foreground"
                                     :datetime="entry.occurred_at"
-                                    >{{
-                                        formatBookingDateTime(entry.occurred_at)
-                                    }}</time
+                                    >{{ formatBookingDateTime(entry.occurred_at, page.props.bookingTimezone) }}</time
                                 >
                             </li>
                         </ol>

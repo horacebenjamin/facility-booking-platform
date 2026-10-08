@@ -444,18 +444,18 @@ class OrganisationAccountsTest extends TestCase
         $booking = app(CreateBookingRequest::class)->handle(
             $owner,
             $fixture['resource']->id,
-            CarbonImmutable::parse('2026-10-05 18:00:00'),
+            CarbonImmutable::parse('2026-10-05 17:00:00', 'UTC'),
             CarbonImmutable::parse('2026-10-05 19:00:00'),
             organisation: $organisation,
         );
         $amendment = ['scope' => 'occurrence', 'starts_at' => '2026-10-05 19:00:00', 'ends_at' => '2026-10-05 20:00:00'];
 
         $this->actingAs($member)->patch(route('bookings.amend', $booking), $amendment)->assertForbidden();
-        $this->assertSame('2026-10-05 18:00:00', $booking->fresh()->starts_at->toDateTimeString());
+        $this->assertSame('2026-10-05 17:00:00', $booking->fresh()->starts_at->toDateTimeString());
 
         $this->actingAs($admin)->patch(route('bookings.amend', $booking), $amendment)->assertRedirect(route('bookings.show', $booking));
 
-        $this->assertSame('2026-10-05 19:00:00', $booking->fresh()->starts_at->toDateTimeString());
+        $this->assertSame('2026-10-05 18:00:00', $booking->fresh()->starts_at->toDateTimeString());
         $this->assertSame($organisation->id, $booking->fresh()->organisation_id);
         $audit = Activity::query()->where('subject_id', $booking->id)->where('event', 'booking.amended')->sole();
         $this->assertSame($admin->id, $audit->causer_id);

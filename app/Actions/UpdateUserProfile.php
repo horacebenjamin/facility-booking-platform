@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 class UpdateUserProfile
 {
     /**
-     * @param  array<string, string>  $attributes
+     * @param  array<string, string|null>  $attributes
      */
     public function handle(User $actor, User $profile, array $attributes): void
     {

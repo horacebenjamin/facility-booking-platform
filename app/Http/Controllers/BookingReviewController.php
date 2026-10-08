@@ -6,12 +6,12 @@ use App\Http\Requests\ShowBookingReviewRequest;
 use App\Models\Equipment;
 use App\Models\Resource;
 use App\Models\User;
+use App\Services\BookingDateTime;
 use App\Services\EquipmentRequirement;
 use App\Services\OrganisationBookingContext;
 use App\Services\PricingRequest;
 use App\Services\PricingService;
 use App\Services\RecurrencePattern;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -49,8 +49,8 @@ class BookingReviewController extends Controller
                 'quantity' => (int) $selection['quantity'],
             ];
         }
-        $startsAt = $this->parseDateTime($validated['starts_at']);
-        $endsAt = $this->parseDateTime($validated['ends_at']);
+        $startsAt = BookingDateTime::fromLocalInput($validated['starts_at']);
+        $endsAt = BookingDateTime::fromLocalInput($validated['ends_at']);
         $pricing = $pricingService->quote(new PricingRequest(
             $resource,
             $startsAt,
@@ -65,6 +65,9 @@ class BookingReviewController extends Controller
             );
         }
 
+        $localStartsAt = BookingDateTime::inLocalTimezone($startsAt);
+        $localEndsAt = BookingDateTime::inLocalTimezone($endsAt);
+
         /** @var User $customer */
         $customer = $request->user();
 
@@ -74,8 +77,8 @@ class BookingReviewController extends Controller
                 'centre_name' => $resource->facility->centre->name,
                 'facility_name' => $resource->facility->name,
                 'resource_name' => $resource->name,
-                'starts_at' => $startsAt->format('Y-m-d H:i:s'),
-                'ends_at' => $endsAt->format('Y-m-d H:i:s'),
+                'starts_at' => $localStartsAt->format('Y-m-d H:i:s'),
+                'ends_at' => $localEndsAt->format('Y-m-d H:i:s'),
                 'duration_seconds' => $endsAt->getTimestamp() - $startsAt->getTimestamp(),
                 'equipment' => $equipmentSummary,
             ],
@@ -101,11 +104,5 @@ class BookingReviewController extends Controller
                 'maximum_occurrences' => RecurrencePattern::MaximumOccurrences,
             ],
         ]);
-    }
-
-    private function parseDateTime(string $dateTime): CarbonImmutable
-    {
-        return CarbonImmutable::parse($dateTime, config('app.timezone'))
-            ->setTimezone(config('app.timezone'));
     }
 }

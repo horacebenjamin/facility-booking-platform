@@ -39,6 +39,7 @@ class SystemRoleSeeder extends Seeder
             'closures.manage',
             'incidents.manage',
             'reports.view',
+            'organisations.onboard',
         ],
         'leisure-assistant' => [
             'bookings.view',

@@ -48,6 +48,20 @@ class AttendanceScheduleTest extends TestCase
         $this->assertSame(AttendanceState::Arrived, $booking->fresh()->attendance_state);
     }
 
+    public function test_attendance_confirmation_displays_the_booking_in_london_time(): void
+    {
+        $booking = $this->booking();
+        $booking->update([
+            'starts_at' => '2026-10-05 17:00:00',
+            'ends_at' => '2026-10-05 18:00:00',
+        ]);
+        $this->actingAs($this->assistant($booking->centre));
+
+        Livewire::test(TodaySchedule::class)
+            ->mountAction(TestAction::make('recordArrival')->arguments(['booking' => $booking->id]))
+            ->assertMountedActionModalSee('5 Oct 18:00–19:00');
+    }
+
     public function test_completion_is_offered_after_cleanup_and_retains_full_day_session(): void
     {
         $booking = $this->booking();

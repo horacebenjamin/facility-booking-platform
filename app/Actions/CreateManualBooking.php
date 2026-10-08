@@ -5,18 +5,22 @@ namespace App\Actions;
 use App\Exceptions\BookingSubmissionUnavailable;
 use App\Models\Booking;
 use App\Models\Equipment;
+use App\Models\Organisation;
 use App\Models\Resource;
 use App\Models\User;
 use App\Services\PricingContext;
 use App\Services\PricingOverride;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Validator as ValidationValidator;
 
 class CreateManualBooking
 {
+    public const int STAFF_NOTE_MAX_LENGTH = 1000;
+
     public function __construct(private CreateBookingRequest $createBookingRequest) {}
 
     /**
@@ -32,9 +36,12 @@ class CreateManualBooking
         array $equipmentSelections = [],
         ?int $overrideAmountMinor = null,
         ?string $overrideReason = null,
+        ?Organisation $organisation = null,
+        ?string $staffNote = null,
     ): Booking {
         Gate::forUser($actor)->authorize('createManual', Booking::class);
-        $this->validateInput($startsAt, $endsAt, $equipmentSelections, $overrideAmountMinor, $overrideReason);
+        $staffNote = trim((string) $staffNote) === '' ? null : trim((string) $staffNote);
+        $this->validateInput($startsAt, $endsAt, $equipmentSelections, $overrideAmountMinor, $overrideReason, $staffNote);
 
         $resource = Resource::query()->with('facility.centre')->findOrFail($resourceId);
 
@@ -61,15 +68,29 @@ class CreateManualBooking
                 ),
             );
 
-        return $this->createBookingRequest->handle(
-            customer: $customer,
-            resourceId: $resourceId,
-            startsAt: $startsAt,
-            endsAt: $endsAt,
-            equipmentSelections: $equipmentSelections,
-            pricingContext: $pricingContext,
-            actor: $actor,
-        );
+        return DB::transaction(function () use ($customer, $resourceId, $startsAt, $endsAt, $equipmentSelections, $pricingContext, $actor, $organisation, $staffNote): Booking {
+            $booking = $this->createBookingRequest->handle(
+                customer: $customer,
+                resourceId: $resourceId,
+                startsAt: $startsAt,
+                endsAt: $endsAt,
+                equipmentSelections: $equipmentSelections,
+                pricingContext: $pricingContext,
+                actor: $actor,
+                organisation: $organisation,
+            );
+
+            if ($staffNote !== null) {
+                activity('booking')
+                    ->performedOn($booking)
+                    ->causedBy($actor)
+                    ->event(Booking::STAFF_NOTE_EVENT)
+                    ->withProperties(['note' => $staffNote, 'visibility' => 'internal'])
+                    ->log('Internal staff note recorded');
+            }
+
+            return $booking;
+        });
     }
 
     /**
@@ -81,6 +102,7 @@ class CreateManualBooking
         array $equipmentSelections,
         ?int $overrideAmountMinor,
         ?string $overrideReason,
+        ?string $staffNote,
     ): void {
         Validator::make([
             'starts_at' => $startsAt,
@@ -88,6 +110,7 @@ class CreateManualBooking
             'equipment' => $equipmentSelections,
             'override_amount_minor' => $overrideAmountMinor,
             'override_reason' => $overrideReason,
+            'staff_note' => $staffNote,
         ], [
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
@@ -96,6 +119,7 @@ class CreateManualBooking
             'equipment.*.quantity' => ['required', 'integer', 'min:1'],
             'override_amount_minor' => ['nullable', 'integer', 'min:0'],
             'override_reason' => ['nullable', 'string', 'max:2000'],
+            'staff_note' => ['nullable', 'string', 'max:'.self::STAFF_NOTE_MAX_LENGTH],
         ])->after(function (ValidationValidator $validator) use ($overrideAmountMinor, $overrideReason): void {
             $hasReason = trim((string) $overrideReason) !== '';
 

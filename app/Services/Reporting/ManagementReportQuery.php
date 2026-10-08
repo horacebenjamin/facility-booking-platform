@@ -229,8 +229,8 @@ class ManagementReportQuery
         $bookings = Booking::query()->where('status', BookingStatus::Confirmed)
             ->where('starts_at', '<', $filters->endsAt)->where('ends_at', '>', $filters->startsAt)
             ->whereIn('resource_id', $resources->modelKeys())->get()->groupBy('resource_id');
-        $day = $filters->startsAt->setTimezone(ReportFilters::TIMEZONE)->startOfDay();
-        $endDay = $filters->endsAt->setTimezone(ReportFilters::TIMEZONE)->startOfDay();
+        $day = $filters->startsAt->setTimezone(ReportFilters::timezone())->startOfDay();
+        $endDay = $filters->endsAt->setTimezone(ReportFilters::timezone())->startOfDay();
         $rows = [];
 
         while ($day->lt($endDay)) {
@@ -272,7 +272,7 @@ class ManagementReportQuery
      */
     private function revenueLine(Booking $booking, int $amountMinor, ?CarbonInterface $paidAt): array
     {
-        $period = $paidAt?->setTimezone(ReportFilters::TIMEZONE)->toDateString() ?? 'unknown';
+        $period = $paidAt?->setTimezone(ReportFilters::timezone())->toDateString() ?? 'unknown';
         $organisation = $booking->organisation;
 
         return ['amountMinor' => $amountMinor, 'groups' => [
@@ -311,8 +311,8 @@ class ManagementReportQuery
             if ($occupancy === null) {
                 return 0;
             }
-            $startsAt = $occupancy->startsAt->setTimezone(ReportFilters::TIMEZONE)->max($day);
-            $endsAt = $occupancy->endsAt->setTimezone(ReportFilters::TIMEZONE)->min($dayEnd);
+            $startsAt = $occupancy->startsAt->setTimezone(ReportFilters::timezone())->max($day);
+            $endsAt = $occupancy->endsAt->setTimezone(ReportFilters::timezone())->min($dayEnd);
 
             return $startsAt->lt($endsAt) ? (int) $startsAt->diffInMinutes($endsAt) : 0;
         });

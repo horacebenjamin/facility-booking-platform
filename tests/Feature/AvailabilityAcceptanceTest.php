@@ -100,15 +100,15 @@ class AvailabilityAcceptanceTest extends TestCase
     {
         $resource = $this->bookableResource();
         $block = AvailabilityBlock::factory()->forResource($resource)->create([
-            'starts_at' => '2026-10-05 18:00:00',
-            'ends_at' => '2026-10-05 19:00:00',
+            'starts_at' => $this->localBookingTimeAsUtcString('2026-10-05 18:00:00'),
+            'ends_at' => $this->localBookingTimeAsUtcString('2026-10-05 19:00:00'),
             'reason' => 'Staff-only maintenance instructions',
         ]);
         $equipment = Equipment::factory()->for($resource->facility->centre)->create(['quantity' => 1]);
         $allocation = EquipmentAllocation::factory()->for($equipment)->create([
             'quantity' => 1,
-            'starts_at' => '2026-10-05 18:00:00',
-            'ends_at' => '2026-10-05 19:00:00',
+            'starts_at' => $this->localBookingTimeAsUtcString('2026-10-05 18:00:00'),
+            'ends_at' => $this->localBookingTimeAsUtcString('2026-10-05 19:00:00'),
         ]);
 
         $response = $this->postJson(route('availability.check'), $this->payload($resource, equipment: [$this->equipment($equipment)]));
@@ -135,8 +135,8 @@ class AvailabilityAcceptanceTest extends TestCase
 
         $result = app(AvailabilityService::class)->check(
             $resource,
-            CarbonImmutable::parse('2026-10-05 18:00:00', config('app.timezone')),
-            CarbonImmutable::parse('2026-10-05 19:00:00', config('app.timezone')),
+            $this->localBookingTimeAsUtcInstant('2026-10-05 18:00:00'),
+            $this->localBookingTimeAsUtcInstant('2026-10-05 19:00:00'),
             evaluatedAt: CarbonImmutable::parse('2026-10-01 12:00:00', config('app.timezone')),
         );
 
@@ -274,12 +274,22 @@ class AvailabilityAcceptanceTest extends TestCase
         ?string $expiresAt = null,
     ): AllocationOccupancy {
         $occupancy = AllocationOccupancy::factory()->create([
-            'starts_at' => $startsAt,
-            'ends_at' => $endsAt,
+            'starts_at' => $this->localBookingTimeAsUtcString($startsAt),
+            'ends_at' => $this->localBookingTimeAsUtcString($endsAt),
             'expires_at' => $expiresAt,
         ]);
         $occupancy->allocationUnits()->attach($unit);
 
         return $occupancy;
+    }
+
+    private function localBookingTimeAsUtcInstant(string $dateTime): CarbonImmutable
+    {
+        return CarbonImmutable::parse($dateTime, (string) config('booking.local_timezone'))->utc();
+    }
+
+    private function localBookingTimeAsUtcString(string $dateTime): string
+    {
+        return $this->localBookingTimeAsUtcInstant($dateTime)->toDateTimeString();
     }
 }

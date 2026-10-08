@@ -6,8 +6,6 @@ use Carbon\CarbonImmutable;
 
 final readonly class ReportFilters
 {
-    public const string TIMEZONE = 'Europe/London';
-
     public const int MAX_RANGE_DAYS = 366;
 
     public function __construct(
@@ -28,8 +26,8 @@ final readonly class ReportFilters
         ?int $customerId = null,
     ): self {
         return new self(
-            CarbonImmutable::parse($startDate, self::TIMEZONE)->startOfDay()->utc(),
-            CarbonImmutable::parse($endDate, self::TIMEZONE)->addDay()->startOfDay()->utc(),
+            CarbonImmutable::parse($startDate, self::timezone())->startOfDay()->utc(),
+            CarbonImmutable::parse($endDate, self::timezone())->addDay()->startOfDay()->utc(),
             $centreId,
             $facilityId,
             $resourceId,
@@ -53,6 +51,11 @@ final readonly class ReportFilters
     /** The inclusive local calendar date on which the reporting period ends. */
     public function localEndDate(): string
     {
-        return $this->endsAt->setTimezone(self::TIMEZONE)->subDay()->toDateString();
+        return $this->endsAt->setTimezone(self::timezone())->subDay()->toDateString();
+    }
+
+    public static function timezone(): string
+    {
+        return (string) config('booking.local_timezone');
     }
 }

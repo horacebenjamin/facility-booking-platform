@@ -608,6 +608,7 @@ class BookingReviewTest extends TestCase
     public function test_review_shows_persisted_context_and_hides_decisions_without_permission(): void
     {
         $booking = $this->protectedBooking(withEquipment: true);
+        $booking->update(['starts_at' => '2026-10-05 17:00:00', 'ends_at' => '2026-10-05 18:00:00']);
         BookingPriceSnapshot::factory()->for($booking)->create();
         $manager = $this->assignedManager($booking->centre);
         Role::findByName('manager')->revokePermissionTo('bookings.approve');
@@ -624,6 +625,10 @@ class BookingReviewTest extends TestCase
             ->assertActionHidden('approve')
             ->assertActionHidden('reject')
             ->assertFormFieldDoesNotExist('financial_status');
+
+        Livewire::test(ListBookings::class)
+            ->assertCanSeeTableRecords([$booking])
+            ->assertSee('5 Oct 2026, 18:00');
     }
 
     public function test_guests_are_redirected_from_management_list_and_review(): void

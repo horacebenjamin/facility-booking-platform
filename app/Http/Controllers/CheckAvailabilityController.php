@@ -7,8 +7,8 @@ use App\Http\Requests\CheckAvailabilityRequest;
 use App\Models\Equipment;
 use App\Models\Resource;
 use App\Services\AvailabilityService;
+use App\Services\BookingDateTime;
 use App\Services\EquipmentRequirement;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 
 class CheckAvailabilityController extends Controller
@@ -29,8 +29,8 @@ class CheckAvailabilityController extends Controller
 
         $availability = $availabilityService->check(
             $resource,
-            $this->parseDateTime($validated['starts_at']),
-            $this->parseDateTime($validated['ends_at']),
+            BookingDateTime::fromLocalInput($validated['starts_at']),
+            BookingDateTime::fromLocalInput($validated['ends_at']),
             $equipmentRequirements,
         );
 
@@ -43,11 +43,5 @@ class CheckAvailabilityController extends Controller
                 ),
             ],
         ]);
-    }
-
-    private function parseDateTime(string $dateTime): CarbonImmutable
-    {
-        return CarbonImmutable::parse($dateTime, config('app.timezone'))
-            ->setTimezone(config('app.timezone'));
     }
 }

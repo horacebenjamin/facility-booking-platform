@@ -11,6 +11,7 @@ use App\Exceptions\AttendanceTransitionUnavailable;
 use App\Models\Booking;
 use App\Models\Equipment;
 use App\Models\User;
+use App\Services\BookingDateTime;
 use App\Services\TodayScheduleService;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
@@ -153,8 +154,10 @@ class TodaySchedule extends Page
             ->modalHeading($label)
             ->modalDescription(function (array $arguments) use ($description): string {
                 $booking = $this->attendanceBooking($arguments);
+                $startsAt = BookingDateTime::inLocalTimezone($booking->starts_at);
+                $endsAt = BookingDateTime::inLocalTimezone($booking->ends_at);
 
-                return $booking->reference.' · '.$booking->facility->name.' · '.$booking->resource->name.' · '.$booking->starts_at->format('d M H:i').'–'.$booking->ends_at->format('H:i').'. '.$description;
+                return $booking->reference.' · '.$booking->facility->name.' · '.$booking->resource->name.' · '.$startsAt->format('d M H:i').'–'.$endsAt->format('H:i').'. '.$description;
             })
             ->mountUsing(function (array $arguments): void {
                 $this->attendanceBooking($arguments);

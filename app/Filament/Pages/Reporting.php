@@ -77,7 +77,7 @@ class Reporting extends Page
     {
         abort_unless(static::canAccess(), 403);
 
-        $today = CarbonImmutable::now(ReportFilters::TIMEZONE);
+        $today = CarbonImmutable::now(ReportFilters::timezone());
         $this->startDate = $this->startDate === '' ? $today->subDays(29)->toDateString() : $this->startDate;
         $this->endDate = $this->endDate === '' ? $today->toDateString() : $this->endDate;
     }

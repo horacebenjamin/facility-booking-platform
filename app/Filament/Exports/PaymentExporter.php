@@ -19,7 +19,7 @@ class PaymentExporter extends Exporter
     {
         return [
             ExportColumn::make('reference')->label('Payment reference'),
-            ExportColumn::make('succeeded_at')->label('Settled (Europe/London)')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
+            ExportColumn::make('succeeded_at')->label('Settled ('.config('booking.local_timezone').')')->formatStateUsing(fn ($state): string => static::localDateTime($state)),
             ExportColumn::make('booking.reference')->label('Booking reference'),
             ExportColumn::make('booking.centre.name')->label('Centre'),
             ExportColumn::make('booking.facility.name')->label('Facility'),

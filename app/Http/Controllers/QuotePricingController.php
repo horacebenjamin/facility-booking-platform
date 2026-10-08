@@ -6,13 +6,13 @@ use App\Enums\PricingFailureReason;
 use App\Http\Requests\QuotePricingRequest;
 use App\Models\Equipment;
 use App\Models\Resource;
+use App\Services\BookingDateTime;
 use App\Services\EquipmentPriceLine;
 use App\Services\EquipmentRequirement;
 use App\Services\PriceQuote;
 use App\Services\PricingRequest;
 use App\Services\PricingService;
 use App\Services\ResourcePriceLine;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 
 class QuotePricingController extends Controller
@@ -33,8 +33,8 @@ class QuotePricingController extends Controller
 
         $result = $pricingService->quote(new PricingRequest(
             $resource,
-            $this->parseDateTime($validated['starts_at']),
-            $this->parseDateTime($validated['ends_at']),
+            BookingDateTime::fromLocalInput($validated['starts_at']),
+            BookingDateTime::fromLocalInput($validated['ends_at']),
             $equipmentRequirements,
         ));
 
@@ -47,12 +47,6 @@ class QuotePricingController extends Controller
         }
 
         return response()->json(['data' => $this->quotePayload($quote)]);
-    }
-
-    private function parseDateTime(string $dateTime): CarbonImmutable
-    {
-        return CarbonImmutable::parse($dateTime, config('app.timezone'))
-            ->setTimezone(config('app.timezone'));
     }
 
     private function pricingFailureResponse(PricingFailureReason $reason): JsonResponse

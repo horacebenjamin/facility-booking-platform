@@ -6,8 +6,8 @@ use App\Actions\CreateBookingRequest;
 use App\Exceptions\BookingSubmissionUnavailable;
 use App\Http\Requests\StoreBookingRequest;
 use App\Models\User;
+use App\Services\BookingDateTime;
 use App\Services\OrganisationBookingContext;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 
 class StoreBookingRequestController extends Controller
@@ -27,8 +27,8 @@ class StoreBookingRequestController extends Controller
             $booking = $createBookingRequest->handle(
                 $customer,
                 $validated['resource_id'],
-                $this->parseDateTime($validated['starts_at']),
-                $this->parseDateTime($validated['ends_at']),
+                BookingDateTime::fromLocalInput($validated['starts_at']),
+                BookingDateTime::fromLocalInput($validated['ends_at']),
                 $validated['equipment'] ?? [],
                 organisation: $organisation,
             );
@@ -47,11 +47,5 @@ class StoreBookingRequestController extends Controller
                 'booked_by_name' => $customer->name,
             ],
         ], 201);
-    }
-
-    private function parseDateTime(string $dateTime): CarbonImmutable
-    {
-        return CarbonImmutable::parse($dateTime, config('app.timezone'))
-            ->setTimezone(config('app.timezone'));
     }
 }

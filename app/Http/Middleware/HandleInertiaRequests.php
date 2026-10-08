@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'bookingTimezone' => (string) config('booking.local_timezone'),
             'auth' => [
                 'user' => $request->user(),
                 'canUseCustomerArea' => $request->user()?->hasRole('customer') ?? false,

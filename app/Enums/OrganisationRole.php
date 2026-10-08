@@ -21,6 +21,17 @@ enum OrganisationRole: string
         };
     }
 
+    /**
+     * Roles staff may assign when onboarding a customer into an existing organisation.
+     * Ownership is only granted when staff create a new organisation for the customer.
+     *
+     * @return list<self>
+     */
+    public static function staffAssignable(): array
+    {
+        return [self::Member, self::BookingManager, self::Finance, self::Admin];
+    }
+
     public function canManageMembers(): bool
     {
         return in_array($this, [self::Owner, self::Admin], true);

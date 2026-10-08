@@ -13,6 +13,7 @@ use App\Models\Facility;
 use App\Models\FacilityBookableHour;
 use App\Models\Resource;
 use App\Models\ResourceBookableHour;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -43,6 +44,20 @@ class CheckAvailabilityTest extends TestCase
                     'reasons' => [],
                 ],
             ]);
+    }
+
+    public function test_bst_local_time_is_checked_against_local_bookable_hours(): void
+    {
+        $resource = $this->bookableResource(['18:00:00', '19:00:00'], ['18:00:00', '19:00:00']);
+
+        $this->postJson(route('availability.check'), $this->payload(
+            $resource,
+            startsAt: '2026-10-05 18:00:00',
+            endsAt: '2026-10-05 19:00:00',
+        ))
+            ->assertOk()
+            ->assertJsonPath('data.available', true)
+            ->assertJsonPath('data.reasons', []);
     }
 
     public function test_returns_resource_conflict_without_private_occupancy_details(): void
@@ -355,8 +370,8 @@ class CheckAvailabilityTest extends TestCase
     private function occupy(AllocationUnit $unit, string $startsAt = '2026-10-05 18:00:00', string $endsAt = '2026-10-05 19:00:00'): AllocationOccupancy
     {
         $occupancy = AllocationOccupancy::factory()->create([
-            'starts_at' => $startsAt,
-            'ends_at' => $endsAt,
+            'starts_at' => $this->localBookingTimeAsUtcString($startsAt),
+            'ends_at' => $this->localBookingTimeAsUtcString($endsAt),
         ]);
         $occupancy->allocationUnits()->attach($unit);
 
@@ -369,8 +384,15 @@ class CheckAvailabilityTest extends TestCase
     private function periodAttributes(): array
     {
         return [
-            'starts_at' => '2026-10-05 18:00:00',
-            'ends_at' => '2026-10-05 19:00:00',
+            'starts_at' => $this->localBookingTimeAsUtcString('2026-10-05 18:00:00'),
+            'ends_at' => $this->localBookingTimeAsUtcString('2026-10-05 19:00:00'),
         ];
+    }
+
+    private function localBookingTimeAsUtcString(string $dateTime): string
+    {
+        return CarbonImmutable::parse($dateTime, (string) config('booking.local_timezone'))
+            ->utc()
+            ->toDateTimeString();
     }
 }

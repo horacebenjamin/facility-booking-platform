@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { show as showBooking } from '@/routes/bookings';
@@ -29,6 +29,8 @@ defineProps<{
         booked_by_name: string;
     }[];
 }>();
+
+const page = usePage<{ bookingTimezone: string }>();
 </script>
 
 <template>
@@ -82,7 +84,7 @@ defineProps<{
                             }}</Badge>
                         </div>
                         <p class="text-sm">
-                            {{ formatBookingDateTime(booking.starts_at) }} ·
+                            {{ formatBookingDateTime(booking.starts_at, page.props.bookingTimezone) }} ·
                             {{ booking.financial_status_label }}
                         </p>
                         <p
