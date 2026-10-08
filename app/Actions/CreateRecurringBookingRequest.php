@@ -51,6 +51,8 @@ class CreateRecurringBookingRequest
 
         return DB::transaction(function () use ($centreId, $customer, $resourceId, $pattern, $equipmentSelections, $periods, $selectedOccurrenceIndexes, $organisation): CreateBookingSeriesResult {
             $context = $this->bookingRequestEngine->lockContext($resourceId, $equipmentSelections, $centreId);
+            $customer = User::query()->findOrFail($customer->id);
+            $this->authorize($customer, $organisation);
 
             if ($organisation !== null) {
                 $organisation = $this->organisationBookingContext->lockForBooking($customer, $organisation);

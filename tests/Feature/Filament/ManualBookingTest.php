@@ -37,6 +37,7 @@ use Database\Seeders\SystemRoleSeeder;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
@@ -87,6 +88,29 @@ class ManualBookingTest extends TestCase
         $this->assertSame('staff_assisted', $activity->properties['booking_channel'] ?? null);
         $this->assertTrue(Gate::forUser($customer)->allows('viewCustomer', $booking));
         $this->assertSame($booking->id, $customer->fresh()->bookings()->sole()->id);
+    }
+
+    public function test_assisted_booking_rechecks_assignment_inside_its_transaction(): void
+    {
+        $fixture = $this->bookableFixture();
+        $manager = $this->manager($fixture['centre']);
+        $customer = $this->customer();
+        $revoked = false;
+        DB::connection()->beforeStartingTransaction(function () use ($manager, $fixture, &$revoked): void {
+            if (! $revoked) {
+                $revoked = true;
+                $manager->assignedCentres()->detach($fixture['centre']);
+            }
+        });
+        try {
+            $this->createManual($manager, $customer, $fixture);
+            $this->fail('Revoked centre access must prevent the booking.');
+        } catch (AuthorizationException) {
+        }
+        $this->assertTrue($revoked);
+        $this->assertDatabaseEmpty('bookings');
+        $this->assertDatabaseEmpty('allocation_occupancies');
+        $this->assertDatabaseEmpty('booking_price_snapshots');
     }
 
     public function test_only_an_assigned_manager_can_access_the_assisted_booking_page_and_action(): void

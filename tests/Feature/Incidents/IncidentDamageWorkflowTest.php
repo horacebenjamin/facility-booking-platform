@@ -15,13 +15,16 @@ use App\Models\Centre;
 use App\Models\DamageReport;
 use App\Models\Equipment;
 use App\Models\Incident;
+use App\Models\Resource;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemRoleSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\TestWith;
 use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
@@ -61,6 +64,33 @@ class IncidentDamageWorkflowTest extends TestCase
         $this->assertSame(OperationalIssueStatus::Open, $incident->status);
         $this->assertSame($bookingBefore, $booking->fresh()->getRawOriginal());
         $this->assertTrue(Activity::query()->where('subject_type', Incident::class)->where('subject_id', $incident->id)->where('event', 'incident.created')->exists());
+    }
+
+    #[TestWith([CreateIncident::class])]
+    #[TestWith([CreateDamageReport::class])]
+    public function test_booking_context_is_rechecked_at_the_transaction_boundary(string $action): void
+    {
+        $booking = $this->booking();
+        $staff = $this->assistant($booking->centre);
+        $replacement = Resource::factory()->for($booking->resource->facility)->create();
+        $data = $action === CreateIncident::class ? $this->incidentData($booking) : $this->damageData($booking);
+        $changed = false;
+        DB::connection()->beforeStartingTransaction(function () use ($booking, $replacement, &$changed): void {
+            if (! $changed) {
+                $changed = true;
+                Booking::query()->whereKey($booking->id)->update(['resource_id' => $replacement->id]);
+            }
+        });
+        try {
+            app($action)->handle($staff, $data);
+            $this->fail('The submitted resource no longer matches the booking.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('resource_id', $exception->errors());
+        }
+        $this->assertTrue($changed);
+        $this->assertDatabaseEmpty('incidents');
+        $this->assertDatabaseEmpty('damage_reports');
+        $this->assertFalse(Activity::query()->whereIn('event', ['incident.created', 'damage.created'])->exists());
     }
 
     public function test_authorised_staff_can_record_damage_with_equipment_context_without_assigning_liability(): void

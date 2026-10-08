@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ResourceAllocationConfiguration;
 use Database\Factories\ResourceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -96,9 +97,10 @@ class Resource extends Model
             }
         }
 
-        $this->allocationUnits()->syncWithPivotValues($allocationUnits, [
-            'facility_id' => $this->facility_id,
-        ]);
+        app(ResourceAllocationConfiguration::class)->replace($this, array_map(
+            static fn (AllocationUnit $unit): int => $unit->id,
+            array_values($allocationUnits),
+        ));
     }
 
     /**

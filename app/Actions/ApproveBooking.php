@@ -15,6 +15,7 @@ use App\Models\BookingEquipment;
 use App\Models\CustomerInvoiceTerms;
 use App\Models\Equipment;
 use App\Models\EquipmentAllocation;
+use App\Models\Facility;
 use App\Models\Organisation;
 use App\Models\Resource;
 use App\Models\User;
@@ -47,11 +48,11 @@ class ApproveBooking
         $centreId = $this->centreReservationLock->centreIdForBooking($booking->id);
 
         return DB::transaction(function () use ($actor, $booking, $centreId): Booking {
-            $this->centreReservationLock->lock($centreId);
+            $centre = $this->centreReservationLock->lock($centreId);
             $booking = Booking::query()
-                ->with('centre')
                 ->lockForUpdate()
                 ->findOrFail($booking->id);
+            $booking->setRelation('centre', $centre);
 
             if ($booking->centre_id !== $centreId) {
                 throw new BookingLifecycleTransitionUnavailable('The booking centre has changed. Refresh before approving.');
@@ -71,13 +72,14 @@ class ApproveBooking
             }
 
             $resource = Resource::query()
-                ->with('facility.centre')
                 ->lockForUpdate()
                 ->findOrFail($booking->resource_id);
-
-            if ($resource->facility->centre_id !== $centreId) {
+            $facility = Facility::query()->where('centre_id', $centreId)->lockForUpdate()->find($resource->facility_id);
+            if ($facility === null) {
                 throw new BookingLifecycleTransitionUnavailable('The resource centre has changed. Refresh before approving.');
             }
+            $facility->setRelation('centre', $centre);
+            $resource->setRelation('facility', $facility);
 
             $allocationUnits = $resource->allocationUnits()
                 ->orderBy('allocation_units.id')
@@ -135,16 +137,17 @@ class ApproveBooking
                 $requirements,
                 $evaluatedAt,
                 $booking->id,
+                lockReservations: true,
             );
 
             if (! $availability->isAvailable()) {
                 throw new BookingLifecycleTransitionUnavailable('This booking is no longer available for approval.');
             }
 
-            User::query()->lockForUpdate()->findOrFail($booking->customer_id);
             if ($booking->organisation_id !== null) {
                 Organisation::query()->lockForUpdate()->findOrFail($booking->organisation_id);
             }
+            User::query()->lockForUpdate()->findOrFail($booking->customer_id);
             $terms = CustomerInvoiceTerms::query()->responsibleFor($booking)->where('enabled', true)->lockForUpdate()->first();
             if ($terms !== null) {
                 try {

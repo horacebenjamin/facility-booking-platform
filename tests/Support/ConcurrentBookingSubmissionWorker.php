@@ -3,11 +3,13 @@
 namespace Tests\Support;
 
 use App\Actions\CreateBookingRequest;
+use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\BookingSubmissionUnavailable;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Event;
 use Throwable;
 
 class ConcurrentBookingSubmissionWorker
@@ -25,6 +27,7 @@ class ConcurrentBookingSubmissionWorker
             /** @var Application $application */
             $application = require __DIR__.'/../../bootstrap/app.php';
             $application->make(Kernel::class)->bootstrap();
+            Event::fake([LifecycleNotificationRequested::class]);
 
             fwrite(STDERR, "Booking concurrency worker [{$workerIdentifier}] connecting to barrier.\n");
             $socket = stream_socket_client($barrierAddress, $errorCode, $errorMessage, 10);

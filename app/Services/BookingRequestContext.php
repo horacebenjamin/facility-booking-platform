@@ -19,5 +19,6 @@ final readonly class BookingRequestContext
         public Collection $allocationUnits,
         public Collection $equipmentById,
         public array $equipmentRequirements,
+        public bool $locksReservations = false,
     ) {}
 }

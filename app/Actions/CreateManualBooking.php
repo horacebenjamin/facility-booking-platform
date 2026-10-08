@@ -8,6 +8,7 @@ use App\Models\Equipment;
 use App\Models\Organisation;
 use App\Models\Resource;
 use App\Models\User;
+use App\Services\CentreReservationLock;
 use App\Services\PricingContext;
 use App\Services\PricingOverride;
 use Carbon\CarbonImmutable;
@@ -21,7 +22,7 @@ class CreateManualBooking
 {
     public const int STAFF_NOTE_MAX_LENGTH = 1000;
 
-    public function __construct(private CreateBookingRequest $createBookingRequest) {}
+    public function __construct(private CreateBookingRequest $createBookingRequest, private CentreReservationLock $reservationLock) {}
 
     /**
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
@@ -68,7 +69,13 @@ class CreateManualBooking
                 ),
             );
 
-        return DB::transaction(function () use ($customer, $resourceId, $startsAt, $endsAt, $equipmentSelections, $pricingContext, $actor, $organisation, $staffNote): Booking {
+        return DB::transaction(function () use ($centreId, $customer, $resourceId, $startsAt, $endsAt, $equipmentSelections, $pricingContext, $actor, $organisation, $staffNote): Booking {
+            $centre = $this->reservationLock->lock($centreId);
+            $actor = User::query()->findOrFail($actor->id);
+            Gate::forUser($actor)->authorize('createManual', Booking::class);
+            if (! $actor->isAssignedToCentre($centre)) {
+                throw new AuthorizationException;
+            }
             $booking = $this->createBookingRequest->handle(
                 customer: $customer,
                 resourceId: $resourceId,

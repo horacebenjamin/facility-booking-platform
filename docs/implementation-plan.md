@@ -2355,6 +2355,37 @@ Concurrent operations cannot produce invalid physical or financial state.
 
 The application's most important integrity guarantees have automated concurrency evidence.
 
+## M24 Implementation Outcome
+
+- Retained the existing centre reservation boundary, immutable commercial
+  snapshots, ordered invoice booking locks and durable Stripe payment attempts.
+- Repaired nested MySQL snapshot reads that could miss committed physical or
+  equipment protection. Authoritative availability and closure impact detection
+  now use current reads; previews remain read-only.
+- Coordinated equipment capacity/location edits and allocation-unit mapping
+  changes with reservations. Active protection cannot be silently invalidated;
+  capacity decreases are checked against peak simultaneous usage.
+- Aligned existing organisation-before-user lock order across booking, approval,
+  invoice terms and assisted onboarding. Rejection now participates in the same
+  reservation boundary as approval/cancellation.
+- Moved incident/damage context validation and authorization into their locked
+  transaction; assisted booking rechecks centre access after acquiring its lock.
+- Added MySQL snapshot/interleaving and explicitly coordinated worker cases for
+  assisted/customer booking contention and configuration versus reservation
+  contention, including closure detection across newly committed hierarchy rows
+  and preservation of the original request after a conflicting amendment.
+  Added inventory boundary/rollback/interface tests and stale context
+  and assignment regression tests. Existing invoice, payment, notification and
+  attendance concurrency protections were reviewed rather than redesigned.
+- Reviewed existing foreign keys, state/owner checks and unique financial,
+  occurrence, membership and communication keys. No schema migration was needed.
+- Retained after-commit notification dispatch and retry deduplication. Stripe
+  and SMTP are external systems: provider timeout/retention and accepted-mail
+  crash windows do not have distributed exactly-once guarantees. Refund/void
+  workflows remain outside the currently implemented domain.
+- Validation is focused and sequential against MySQL. Full-suite and browser
+  acceptance remain manual; M26 throughput/observability work is deferred.
+
 ---
 
 # M25 — Accessibility & Responsive UX Hardening

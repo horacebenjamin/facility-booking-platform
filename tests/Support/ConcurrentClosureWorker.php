@@ -5,8 +5,10 @@ namespace Tests\Support;
 use App\Actions\ApproveBooking;
 use App\Actions\CreateAvailabilityBlock;
 use App\Actions\CreateBookingRequest;
+use App\Actions\CreateManualBooking;
 use App\Actions\ReconcileStripePayment;
 use App\Actions\ResolveClosureImpact;
+use App\Actions\UpdateEquipment;
 use App\Events\LifecycleNotificationRequested;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
 use App\Exceptions\BookingSubmissionUnavailable;
@@ -14,10 +16,13 @@ use App\Models\AvailabilityBlock;
 use App\Models\AvailabilityBlockBookingImpact;
 use App\Models\Booking;
 use App\Models\Centre;
+use App\Models\Equipment;
 use App\Models\Payment;
+use App\Models\Resource;
 use App\Models\User;
 use App\Services\CentreReservationLock;
 use App\Services\ClosureImpactService;
+use App\Services\ResourceAllocationConfiguration;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\Concerns\InteractsWithTime;
@@ -64,6 +69,7 @@ class ConcurrentClosureWorker
                     if ($this->hold && fgets($this->socket) !== "commit\n") {
                         throw new \RuntimeException('Closure lock holder was not released.');
                     }
+                    $this->hold = false;
 
                     return $centre;
                 }
@@ -79,6 +85,19 @@ class ConcurrentClosureWorker
                         CarbonImmutable::parse('2026-10-05 18:00:00', config('app.timezone')),
                         CarbonImmutable::parse('2026-10-05 19:00:00', config('app.timezone')),
                     )->id],
+                    'booking-equipment' => ['booking_id' => $application->make(CreateBookingRequest::class)->handle(
+                        $actor, (int) $resourceId,
+                        CarbonImmutable::parse('2026-10-05 18:00:00'), CarbonImmutable::parse('2026-10-05 19:00:00'),
+                        [['equipment_id' => (int) $arguments[9], 'quantity' => 1]],
+                    )->id],
+                    'manual' => ['booking_id' => $application->make(CreateManualBooking::class)->handle(
+                        $actor, User::query()->findOrFail((int) $arguments[8]), (int) $centreId, (int) $resourceId,
+                        CarbonImmutable::parse('2026-10-05 18:00:00'), CarbonImmutable::parse('2026-10-05 19:00:00'),
+                    )->id],
+                    'reduce' => ['equipment_id' => $application->make(UpdateEquipment::class)->handle(
+                        $actor, Equipment::query()->findOrFail((int) $arguments[9]), ['quantity' => 0],
+                    )->id],
+                    'detach' => self::detach($application->make(ResourceAllocationConfiguration::class), $actor, (int) $resourceId, (int) $arguments[10]),
                     'closure' => ['block_id' => $application->make(CreateAvailabilityBlock::class)->handle($actor, [
                         'centre_id' => (int) $centreId, 'scope' => 'centre', 'type' => 'maintenance',
                         'starts_at' => '2026-10-05 17:00:00', 'ends_at' => '2026-10-05 20:00:00',
@@ -105,7 +124,7 @@ class ConcurrentClosureWorker
             } catch (BookingLifecycleTransitionUnavailable) {
                 echo json_encode(['outcome' => 'unavailable'], JSON_THROW_ON_ERROR);
             } catch (ValidationException $exception) {
-                if ($operation !== 'resolve') {
+                if (! in_array($operation, ['resolve', 'reduce', 'detach'], true)) {
                     throw $exception;
                 }
                 echo json_encode(['outcome' => 'rejected'], JSON_THROW_ON_ERROR);
@@ -118,6 +137,14 @@ class ConcurrentClosureWorker
 
             return 1;
         }
+    }
+
+    /** @return array{resource_id: int} */
+    private static function detach(ResourceAllocationConfiguration $configuration, User $actor, int $resourceId, int $unitId): array
+    {
+        $configuration->detach($actor, Resource::query()->findOrFail($resourceId), $unitId);
+
+        return ['resource_id' => $resourceId];
     }
 
     /** @return array{booking_id: int} */

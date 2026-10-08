@@ -9,6 +9,7 @@ use App\Models\AllocationOccupancy;
 use App\Models\Booking;
 use App\Models\EquipmentAllocation;
 use App\Models\User;
+use App\Services\CentreReservationLock;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -17,6 +18,8 @@ use Spatie\Activitylog\Models\Activity;
 
 class RejectBooking
 {
+    public function __construct(private CentreReservationLock $reservationLock) {}
+
     public function handle(User $actor, Booking $booking, string $reason): Booking
     {
         $reason = trim($reason);
@@ -29,8 +32,10 @@ class RejectBooking
 
         $this->authorize($actor);
         Gate::forUser($actor)->authorize('reject', $booking);
+        $centreId = $this->reservationLock->centreIdForBooking($booking->id);
 
-        return DB::transaction(function () use ($actor, $booking, $reason): Booking {
+        return DB::transaction(function () use ($actor, $booking, $reason, $centreId): Booking {
+            $this->reservationLock->lock($centreId);
             $booking = Booking::query()
                 ->with('centre')
                 ->lockForUpdate()

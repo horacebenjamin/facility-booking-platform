@@ -20,10 +20,10 @@ class SetCustomerInvoiceTerms
         return DB::transaction(function () use ($actor, $booking, $enabled, $termDays): CustomerInvoiceTerms {
             $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
             Gate::forUser($actor)->authorize('manageInvoiceTerms', $booking);
-            User::query()->lockForUpdate()->findOrFail($booking->customer_id);
             if ($booking->organisation_id !== null) {
                 Organisation::query()->lockForUpdate()->findOrFail($booking->organisation_id);
             }
+            User::query()->lockForUpdate()->findOrFail($booking->customer_id);
             $terms = CustomerInvoiceTerms::query()->responsibleFor($booking)->lockForUpdate()->first();
             $before = $terms === null ? null : ['enabled' => $terms->enabled, 'term_days' => $terms->term_days];
 

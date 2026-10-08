@@ -9,6 +9,8 @@ use App\Models\AvailabilityBlockBookingImpact;
 use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\CustomerInvoiceTerms;
+use App\Models\Equipment;
+use App\Models\EquipmentRate;
 use App\Models\Facility;
 use App\Models\FacilityBookableHour;
 use App\Models\Payment;
@@ -56,9 +58,11 @@ class MySqlClosureConcurrencyTest extends TestCase
                 $db->table('availability_blocks')->whereIn('id', $blockIds)->delete();
                 $occupancyIds = $db->table('allocation_occupancies')->whereIn('booking_id', $bookingIds)->pluck('id');
                 $db->table('allocation_occupancy_allocation_unit')->whereIn('allocation_occupancy_id', $occupancyIds)->delete();
+                $db->table('equipment_allocations')->whereIn('booking_id', $bookingIds)->delete();
                 $db->table('allocation_occupancies')->whereIn('id', $occupancyIds)->delete();
                 $db->table('booking_price_lines')->whereIn('booking_id', $bookingIds)->delete();
                 $db->table('booking_price_snapshots')->whereIn('booking_id', $bookingIds)->delete();
+                $db->table('booking_equipment')->whereIn('booking_id', $bookingIds)->delete();
                 $paymentIds = $db->table('payments')->whereIn('booking_id', $bookingIds)->pluck('id');
                 $db->table('activity_log')->where('subject_type', Payment::class)->whereIn('subject_id', $paymentIds)->delete();
                 $db->table('payment_provider_events')->whereIn('payment_id', $paymentIds)->delete();
@@ -71,9 +75,15 @@ class MySqlClosureConcurrencyTest extends TestCase
                 $db->table('allocation_unit_resource')->where('resource_id', $this->ids['resource'])->delete();
                 $db->table('allocation_units')->where('id', $this->ids['unit'])->delete();
                 $db->table('resources')->where('id', $this->ids['resource'])->delete();
+                if (isset($this->ids['equipment'])) {
+                    $db->table('equipment_rates')->where('equipment_id', $this->ids['equipment'])->delete();
+                    $db->table('equipment')->where('id', $this->ids['equipment'])->delete();
+                }
                 $db->table('centre_user')->where('user_id', $this->ids['manager'])->delete();
                 $db->table('model_has_roles')->where('model_type', User::class)->where('model_id', $this->ids['manager'])->delete();
                 $db->table('model_has_permissions')->where('model_type', User::class)->where('model_id', $this->ids['manager'])->delete();
+                $db->table('model_has_roles')->where('model_type', User::class)->where('model_id', $this->ids['customer'])->delete();
+                $db->table('model_has_permissions')->where('model_type', User::class)->where('model_id', $this->ids['customer'])->delete();
                 $db->table('facilities')->where('id', $this->ids['facility'])->delete();
                 $db->table('centres')->where('id', $this->ids['centre'])->delete();
                 $db->table('users')->whereIn('id', [$this->ids['manager'], $this->ids['customer']])->delete();
@@ -84,7 +94,10 @@ class MySqlClosureConcurrencyTest extends TestCase
                 if (isset($this->ids['created_permission'])) {
                     $db->table('permissions')->where('id', $this->ids['created_permission'])->delete();
                 }
-                foreach (['created_view_permission', 'created_approve_permission'] as $key) {
+                if (isset($this->ids['created_customer_role'])) {
+                    $db->table('roles')->where('id', $this->ids['created_customer_role'])->delete();
+                }
+                foreach (['created_view_permission', 'created_approve_permission', 'created_create_permission', 'created_configuration_permission'] as $key) {
                     if (isset($this->ids[$key])) {
                         $db->table('permissions')->where('id', $this->ids[$key])->delete();
                     }
@@ -107,6 +120,59 @@ class MySqlClosureConcurrencyTest extends TestCase
         $db = DB::connection(self::ConnectionName);
         $this->assertSame(0, $db->table('bookings')->where('resource_id', $this->ids['resource'])->count());
         $this->assertSame(0, $db->table('allocation_occupancies')->whereIn('booking_id', $db->table('bookings')->where('resource_id', $this->ids['resource'])->select('id'))->count());
+    }
+
+    #[TestWith(['manual', 'booking'])]
+    #[TestWith(['booking', 'manual'])]
+    public function test_assisted_and_customer_requests_observe_the_winners_committed_protection(string $first, string $second): void
+    {
+        $this->fixture();
+        $results = $this->workers($first, $second);
+        $this->assertSame('accepted', $results[0]['outcome']);
+        $this->assertSame('unavailable', $results[1]['outcome']);
+        $db = DB::connection(self::ConnectionName);
+        $this->assertSame(1, $db->table('bookings')->where('resource_id', $this->ids['resource'])->count());
+        $this->assertSame(1, $db->table('allocation_occupancies')->where('booking_id', $results[0]['booking_id'])->count());
+        $this->assertSame(1, $db->table('booking_price_snapshots')->where('booking_id', $results[0]['booking_id'])->count());
+    }
+
+    #[TestWith(['reduce', 'booking-equipment'])]
+    #[TestWith(['booking-equipment', 'reduce'])]
+    public function test_equipment_capacity_edit_and_booking_share_the_reservation_boundary(string $first, string $second): void
+    {
+        $this->fixture();
+        $original = DB::getDefaultConnection();
+        DB::setDefaultConnection(self::ConnectionName);
+        try {
+            $equipment = Equipment::factory()->create(['centre_id' => $this->ids['centre'], 'quantity' => 1]);
+            EquipmentRate::factory()->for($equipment)->create();
+            $this->ids['equipment'] = $equipment->id;
+        } finally {
+            DB::setDefaultConnection($original);
+        }
+        $results = $this->workers($first, $second);
+        $this->assertSame('accepted', $results[0]['outcome']);
+        $this->assertSame($first === 'reduce' ? 'unavailable' : 'rejected', $results[1]['outcome']);
+        $db = DB::connection(self::ConnectionName);
+        $quantity = (int) $db->table('equipment')->where('id', $equipment->id)->value('quantity');
+        $allocated = (int) $db->table('equipment_allocations')->where('equipment_id', $equipment->id)->sum('quantity');
+        $this->assertSame($first === 'reduce' ? 0 : 1, $quantity);
+        $this->assertSame($quantity, $allocated);
+        $this->assertSame($quantity, $db->table('bookings')->where('resource_id', $this->ids['resource'])->count());
+    }
+
+    #[TestWith(['detach', 'booking'])]
+    #[TestWith(['booking', 'detach'])]
+    public function test_allocation_mapping_edit_and_booking_cannot_leave_unprotected_capacity(string $first, string $second): void
+    {
+        $this->fixture();
+        $results = $this->workers($first, $second);
+        $this->assertSame('accepted', $results[0]['outcome']);
+        $this->assertSame($first === 'detach' ? 'unavailable' : 'rejected', $results[1]['outcome']);
+        $db = DB::connection(self::ConnectionName);
+        $expected = $first === 'detach' ? 0 : 1;
+        $this->assertSame($expected, $db->table('allocation_unit_resource')->where('resource_id', $this->ids['resource'])->count());
+        $this->assertSame($expected, $db->table('bookings')->where('resource_id', $this->ids['resource'])->count());
     }
 
     public function test_request_committing_while_closure_waits_creates_one_active_requested_impact(): void
@@ -262,11 +328,22 @@ class MySqlClosureConcurrencyTest extends TestCase
             $permission = Permission::findOrCreate('closures.manage', 'web');
             $viewPermission = Permission::findOrCreate('bookings.view', 'web');
             $approvePermission = Permission::findOrCreate('bookings.approve', 'web');
+            $createPermission = Permission::findOrCreate('bookings.create', 'web');
+            $configurationPermission = Permission::findOrCreate('facilities.manage', 'web');
+            $customerRole = Role::findOrCreate('customer', 'web');
+            $customer->assignRole($customerRole);
+            $customer->givePermissionTo($createPermission);
             $manager->assignRole($role);
             $manager->givePermissionTo($permission);
             $manager->givePermissionTo($viewPermission, $approvePermission);
+            $manager->givePermissionTo($createPermission, $configurationPermission);
             $manager->assignedCentres()->attach($centre);
             $this->ids = ['centre' => $centre->id, 'facility' => $facility->id, 'resource' => $resource->id, 'unit' => $unit->id, 'customer' => $customer->id, 'manager' => $manager->id];
+            foreach (['created_create_permission' => $createPermission, 'created_configuration_permission' => $configurationPermission, 'created_customer_role' => $customerRole] as $key => $record) {
+                if ($record->wasRecentlyCreated) {
+                    $this->ids[$key] = $record->id;
+                }
+            }
             if ($role->wasRecentlyCreated) {
                 $this->ids['created_role'] = $role->id;
             }
@@ -295,8 +372,8 @@ class MySqlClosureConcurrencyTest extends TestCase
         $sockets = [];
         try {
             foreach ([$firstOperation, $secondOperation] as $index => $operation) {
-                $actor = $operation === 'booking' ? $this->ids['customer'] : $this->ids['manager'];
-                $process = proc_open([PHP_BINARY, base_path('tests/Support/run-concurrent-closure.php'), "tcp://{$address}", $operation, (string) $actor, (string) $this->ids['resource'], (string) $this->ids['centre'], (string) ($operation === 'resolve' ? $this->ids['impact'] : ($this->ids['block'] ?? 0)), $index === 0 ? 'hold' : 'free'], [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path(), [...getenv(), 'APP_ENV' => 'testing', 'APP_KEY' => (string) config('app.key'), 'DB_CONNECTION' => 'mysql', 'DB_HOST' => (string) config('database.connections.mysql.host'), 'DB_PORT' => (string) config('database.connections.mysql.port'), 'DB_DATABASE' => (string) config('database.connections.mysql.database'), 'DB_USERNAME' => (string) config('database.connections.mysql.username'), 'DB_PASSWORD' => (string) config('database.connections.mysql.password')]);
+                $actor = in_array($operation, ['booking', 'booking-equipment'], true) ? $this->ids['customer'] : $this->ids['manager'];
+                $process = proc_open([PHP_BINARY, base_path('tests/Support/run-concurrent-closure.php'), "tcp://{$address}", $operation, (string) $actor, (string) $this->ids['resource'], (string) $this->ids['centre'], (string) ($operation === 'resolve' ? $this->ids['impact'] : ($this->ids['block'] ?? 0)), $index === 0 ? 'hold' : 'free', (string) $this->ids['customer'], (string) ($this->ids['equipment'] ?? 0), (string) $this->ids['unit']], [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path(), [...getenv(), 'APP_ENV' => 'testing', 'APP_KEY' => (string) config('app.key'), 'DB_CONNECTION' => 'mysql', 'DB_HOST' => (string) config('database.connections.mysql.host'), 'DB_PORT' => (string) config('database.connections.mysql.port'), 'DB_DATABASE' => (string) config('database.connections.mysql.database'), 'DB_USERNAME' => (string) config('database.connections.mysql.username'), 'DB_PASSWORD' => (string) config('database.connections.mysql.password')]);
                 $this->assertIsResource($process);
                 fclose($pipes[0]);
                 $workers[] = ['process' => $process, 'stdout' => $pipes[1], 'stderr' => $pipes[2]];
@@ -306,7 +383,8 @@ class MySqlClosureConcurrencyTest extends TestCase
                 $sockets[] = $socket;
                 $ready = json_decode((string) fgets($socket), true, flags: JSON_THROW_ON_ERROR);
                 fwrite($socket, "go\n");
-                $this->assertSame("locking\n", fgets($socket));
+                $locking = fgets($socket);
+                $this->assertSame("locking\n", $locking, $locking === false ? (string) stream_get_contents($pipes[2]) : 'Worker did not attempt the centre lock.');
                 if ($index === 0) {
                     $this->assertSame("locked\n", fgets($socket));
                 } else {

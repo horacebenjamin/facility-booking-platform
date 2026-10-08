@@ -15,6 +15,7 @@ class AvailabilityBlockEvaluator
         Resource $resource,
         CarbonInterface $startsAt,
         CarbonInterface $endsAt,
+        bool $lockReservations = false,
     ): bool {
         $requestedPeriod = $this->normaliseRequestedPeriod($startsAt, $endsAt);
 
@@ -22,7 +23,7 @@ class AvailabilityBlockEvaluator
             return false;
         }
 
-        return $this->scopeMatcher->blocksFor($resource)
+        $query = $this->scopeMatcher->blocksFor($resource, $lockReservations)
             ->where('starts_at', '<', $requestedPeriod['endsAt'])
             ->where('ends_at', '>', $requestedPeriod['startsAt'])
             ->where(function (Builder $query) use ($requestedPeriod): void {
@@ -31,8 +32,11 @@ class AvailabilityBlockEvaluator
                         $query->whereColumn('ended_at', '>', 'starts_at')
                             ->where('ended_at', '>', $requestedPeriod['startsAt']);
                     });
-            })
-            ->exists();
+            });
+
+        return $lockReservations
+            ? $query->orderBy('id')->lockForUpdate()->first() !== null
+            : $query->exists();
     }
 
     /**

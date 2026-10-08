@@ -6,6 +6,8 @@ use App\Models\Resource;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 
 class AllocationConflictEvaluator
 {
@@ -15,6 +17,7 @@ class AllocationConflictEvaluator
         CarbonInterface $endsAt,
         ?CarbonInterface $evaluatedAt = null,
         ?int $excludedBookingId = null,
+        bool $lockReservations = false,
     ): bool {
         $requestedPeriod = $this->normaliseRequestedPeriod($startsAt, $endsAt);
 
@@ -24,6 +27,21 @@ class AllocationConflictEvaluator
 
         $evaluatedAt = CarbonImmutable::instance($evaluatedAt ?? now())
             ->setTimezone(config('app.timezone'));
+
+        if ($lockReservations) {
+            $query = DB::table('allocation_occupancies as occupancy')
+                ->join('allocation_occupancy_allocation_unit as protection', 'protection.allocation_occupancy_id', '=', 'occupancy.id')
+                ->join('allocation_unit_resource as mapping', 'mapping.allocation_unit_id', '=', 'protection.allocation_unit_id')
+                ->where('mapping.resource_id', $resource->id)
+                ->where('occupancy.starts_at', '<', $requestedPeriod['endsAt'])
+                ->where('occupancy.ends_at', '>', $requestedPeriod['startsAt'])
+                ->where(fn (QueryBuilder $query): QueryBuilder => $query->whereNull('occupancy.expires_at')->orWhere('occupancy.expires_at', '>', $evaluatedAt));
+            if ($excludedBookingId !== null) {
+                $query->where(fn (QueryBuilder $query): QueryBuilder => $query->whereNull('occupancy.booking_id')->orWhere('occupancy.booking_id', '!=', $excludedBookingId));
+            }
+
+            return $query->orderBy('occupancy.id')->lockForUpdate()->first(['occupancy.id']) !== null;
+        }
 
         return $resource->allocationUnits()
             ->whereHas('occupancies', function (Builder $query) use ($requestedPeriod, $evaluatedAt, $excludedBookingId): void {

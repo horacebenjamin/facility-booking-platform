@@ -9,8 +9,10 @@ use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\DamageReport;
 use App\Models\Equipment;
+use App\Models\Facility;
 use App\Models\Resource;
 use App\Models\User;
+use App\Services\CentreReservationLock;
 use App\Services\ClosureAuthorization;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +22,7 @@ use Illuminate\Validation\ValidationException;
 
 class CreateDamageReport
 {
-    public function __construct(private ClosureAuthorization $authorization) {}
+    public function __construct(private ClosureAuthorization $authorization, private CentreReservationLock $reservationLock) {}
 
     /** @param array<string, mixed> $data */
     public function handle(User $actor, array $data): DamageReport
@@ -36,9 +38,12 @@ class CreateDamageReport
         ])->validate();
         $centre = Centre::query()->findOrFail((int) $data['centre_id']);
         Gate::forUser($actor)->authorize('create', [DamageReport::class, $centre]);
-        [$booking, $resource, $equipment] = $this->validateContext($data, $centre);
 
-        return DB::transaction(function () use ($actor, $data, $centre, $booking, $resource, $equipment): DamageReport {
+        return DB::transaction(function () use ($actor, $data, $centre): DamageReport {
+            $centre = $this->reservationLock->lock($centre->id);
+            $actor = $this->authorization->freshActor($actor);
+            Gate::forUser($actor)->authorize('create', [DamageReport::class, $centre]);
+            [$booking, $resource, $equipment] = $this->validateContext($data, $centre);
             $report = new DamageReport;
             $report->forceFill([
                 'centre_id' => $centre->id,
@@ -66,20 +71,21 @@ class CreateDamageReport
      */
     private function validateContext(array $data, Centre $centre): array
     {
-        $booking = isset($data['booking_id']) ? Booking::query()->find((int) $data['booking_id']) : null;
-        if ($data['booking_id'] !== null && ($booking === null || $booking->centre_id !== $centre->id)) {
+        $booking = isset($data['booking_id']) ? Booking::query()->lockForUpdate()->find((int) $data['booking_id']) : null;
+        if (isset($data['booking_id']) && ($booking === null || $booking->centre_id !== $centre->id)) {
             throw ValidationException::withMessages(['booking_id' => 'Select a booking belonging to the selected centre.']);
         }
         $resourceId = $data['resource_id'] ?? $booking?->resource_id;
-        $resource = $resourceId === null ? null : Resource::query()->with('facility')->find((int) $resourceId);
-        if ($resourceId !== null && ($resource === null || $resource->facility->centre_id !== $centre->id)) {
+        $resource = $resourceId === null ? null : Resource::query()->lockForUpdate()->find((int) $resourceId);
+        $facility = $resource === null ? null : Facility::query()->where('centre_id', $centre->id)->lockForUpdate()->find($resource->facility_id);
+        if ($resourceId !== null && ($resource === null || $facility === null)) {
             throw ValidationException::withMessages(['resource_id' => 'Select a resource belonging to the selected centre.']);
         }
         if ($booking !== null && $resource->id !== $booking->resource_id) {
             throw ValidationException::withMessages(['resource_id' => 'The resource must match the booking context.']);
         }
         $equipmentId = $data['equipment_id'] ?? null;
-        $equipment = $equipmentId === null ? null : Equipment::query()->find((int) $equipmentId);
+        $equipment = $equipmentId === null ? null : Equipment::query()->where('centre_id', $centre->id)->lockForUpdate()->find((int) $equipmentId);
         if ($equipmentId !== null && ($equipment === null || $equipment->centre_id !== $centre->id)) {
             throw ValidationException::withMessages(['equipment_id' => 'Select equipment belonging to the selected centre.']);
         }

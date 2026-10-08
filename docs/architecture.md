@@ -852,11 +852,22 @@ BEGIN
 COMMIT
 ```
 
-The exact lock rows and schema are deferred to physical data-model
-design.
+The implemented reservation boundary is `CentreReservationLock`: a locking
+read of the owning centre inside the transaction. Independent centres remain
+independent. Creation, recurring creation, assisted creation, amendment,
+approval, cancellation, rejection, closure mutations and reservation-sensitive
+configuration changes use this boundary. Resource, facility, allocation-unit
+and equipment rows are then read under locks; multi-row selections use primary
+key order. Equipment moves acquire both centre locks in ascending ID order.
 
-Pessimistic/row locking and transactional revalidation should be used
-where appropriate.
+Authoritative availability explicitly requests current locking reads of
+physical protection, equipment allocations and closures. A centre lock alone
+does not refresh a MySQL REPEATABLE READ snapshot established by an enclosing
+transaction. Preview checks remain read-only. Closure impact detection also
+uses current reads, including persisted physical units and buffers, so a booking
+committed while a closure waits receives an impact rather than being cancelled.
+Hierarchy scope queries also use current reads: a newly committed facility must
+not hide its bookings from a centre closure under an older transaction snapshot.
 
 ### 13.2 Friendly Conflict Handling
 
@@ -869,6 +880,55 @@ available", not a raw SQL/lock exception.
 Equipment quantities must receive equivalent transactional protection so
 concurrent bookings cannot collectively allocate more than the available
 quantity.
+
+Equipment edits use `UpdateEquipment` under the reservation boundary. Active
+future/current allocations prevent location changes and quantity reductions
+below peak simultaneous usage. Adjacent intervals are half-open; expired holds
+and completed allocations do not consume current capacity. Allocation-unit
+mapping changes use `ResourceAllocationConfiguration` and are refused while the
+resource has active booking protection. Unchanged mappings are safe to repeat;
+historical occupancy mappings are preserved.
+
+### 13.4 Financial, Organisation and Side-Effect Boundaries (M24)
+
+- Invoice issue locks bookings in ascending ID order. Settlement locks those
+  bookings before the invoice, its lines and payments. The unique booking/charge
+  key prevents duplicate invoice charges; issued amounts remain snapshots.
+- Checkout first commits a durable payment attempt, then serialises provider
+  creation under booking/payment locks. Persisted parameters and the payment
+  reference produce the same Stripe idempotency key on retries. The bounded
+  provider call remains inside the second transaction to prevent concurrent
+  local checkout creation; it cannot be atomic with Stripe.
+- Webhooks lock centre, booking and payment, then deduplicate provider event
+  IDs. Terminal success cannot be undone by a later failure; late success after
+  cancellation is recorded for review without restoring the booking. Browser
+  redirects never establish payment success.
+- Existing organisation rows are locked before customer/user rows across
+  booking ownership, approval, invoice terms, membership addition and assisted
+  onboarding. New organisation creation locks its owner before creating a new,
+  previously inaccessible organisation. Membership uniqueness and last-owner
+  guards remain in force.
+- Attendance and issue reviews lock their canonical record before checking
+  transitions. Incident/damage creation locks the centre and current context,
+  then rechecks authorization and relationships before saving the record/audit.
+  Assisted booking rechecks the manager's role, capability and assignment after
+  acquiring its centre lock. All M23 policies remain authoritative.
+- Booking, financial and operational audit writes share their mutation's
+  transaction. Lifecycle events and queued welcome messages dispatch after
+  commit. Communication semantic keys and channel row locks deduplicate local
+  delivery. SMTP acceptance followed by a crash before the delivery marker can
+  still produce a retry email; distributed exactly-once delivery is not claimed.
+
+M24 adds no schema migration: existing composite hierarchy foreign keys,
+booking protection/snapshot/occurrence uniqueness, organisation membership and
+billing-owner constraints, invoice charge uniqueness, provider identifier/event
+uniqueness and communication semantic keys supply the SQL-enforceable guards.
+Arbitrary interval conflicts and aggregate equipment capacity still require
+application locking. Deadlocks roll back safely; no blanket automatic retry
+around external effects is introduced. Refund/void execution is not currently
+implemented and is not inferred from capability names. Lock throughput tuning,
+provider retention/recovery limits and SMTP acceptance ambiguity remain explicit
+operational concerns for later production/performance work.
 
 ------------------------------------------------------------------------
 

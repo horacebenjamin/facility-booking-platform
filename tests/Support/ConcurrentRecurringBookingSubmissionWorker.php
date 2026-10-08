@@ -4,11 +4,13 @@ namespace Tests\Support;
 
 use App\Actions\CreateRecurringBookingRequest;
 use App\Enums\RecurrenceFrequency;
+use App\Events\LifecycleNotificationRequested;
 use App\Models\User;
 use App\Services\RecurrencePattern;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Event;
 use Throwable;
 
 class ConcurrentRecurringBookingSubmissionWorker
@@ -26,6 +28,7 @@ class ConcurrentRecurringBookingSubmissionWorker
             /** @var Application $application */
             $application = require __DIR__.'/../../bootstrap/app.php';
             $application->make(Kernel::class)->bootstrap();
+            Event::fake([LifecycleNotificationRequested::class]);
             $socket = stream_socket_client($barrierAddress, $errorCode, $errorMessage, 10);
 
             if ($socket === false) {

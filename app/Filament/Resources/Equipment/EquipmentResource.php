@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Equipment;
 
+use App\Actions\UpdateEquipment;
 use App\Filament\Resources\Equipment\Pages\CreateEquipment;
 use App\Filament\Resources\Equipment\Pages\EditEquipment;
 use App\Filament\Resources\Equipment\Pages\ListEquipment;
@@ -9,12 +10,14 @@ use App\Filament\Resources\VenueConfigurationResource;
 use App\Models\Centre;
 use App\Models\Equipment;
 use App\Models\Facility;
+use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -24,6 +27,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
+use Illuminate\Validation\ValidationException;
 
 class EquipmentResource extends VenueConfigurationResource
 {
@@ -73,7 +78,10 @@ class EquipmentResource extends VenueConfigurationResource
             SelectFilter::make('centre')->relationship('centre', 'name',
                 modifyQueryUsing: fn (Builder $query): Builder => $query->whereHas('assignedUsers', fn (Builder $assigned): Builder => $assigned->whereKey(auth()->id())),
             ),
-        ])->recordActions([EditAction::make(), DeleteAction::make()]);
+        ])->recordActions([
+            EditAction::make()->using(fn (EditAction $action, Equipment $record, array $data) => static::updateFromAction($action, $record, $data)),
+            DeleteAction::make(),
+        ]);
     }
 
     public static function getPages(): array
@@ -83,5 +91,19 @@ class EquipmentResource extends VenueConfigurationResource
             'create' => CreateEquipment::route('/create'),
             'edit' => EditEquipment::route('/{record}/edit'),
         ];
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function updateFromAction(EditAction $action, Equipment $record, array $data): void
+    {
+        $actor = auth()->user();
+        assert($actor instanceof User);
+        try {
+            app(UpdateEquipment::class)->handle($actor, $record, $data);
+        } catch (ValidationException $exception) {
+            Notification::make()->title('Equipment could not be updated')
+                ->body((string) Arr::first(Arr::flatten($exception->errors())))->danger()->send();
+            $action->halt();
+        }
     }
 }

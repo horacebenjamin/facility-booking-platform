@@ -15,6 +15,7 @@ use App\Models\BookingPriceSnapshot;
 use App\Models\BookingSeries;
 use App\Models\Equipment;
 use App\Models\EquipmentAllocation;
+use App\Models\Facility;
 use App\Models\Organisation;
 use App\Models\Resource;
 use App\Models\User;
@@ -52,8 +53,9 @@ class BookingRequestEngine
      */
     private function resolveContext(int $resourceId, array $equipmentSelections, bool $lock, ?int $centreId = null): BookingRequestContext
     {
+        $centre = null;
         if ($lock) {
-            $this->centreReservationLock->lock($centreId ?? throw new \LogicException('A centre is required for reservation locking.'));
+            $centre = $this->centreReservationLock->lock($centreId ?? throw new \LogicException('A centre is required for reservation locking.'));
         }
 
         $resourceQuery = Resource::query();
@@ -63,7 +65,16 @@ class BookingRequestEngine
         }
 
         $resource = $resourceQuery->findOrFail($resourceId);
-        $resource->load('facility.centre');
+        if ($lock) {
+            $facility = Facility::query()->where('centre_id', $centreId)->lockForUpdate()->find($resource->facility_id);
+            if ($facility === null) {
+                throw new BookingSubmissionUnavailable;
+            }
+            $facility->setRelation('centre', $centre);
+            $resource->setRelation('facility', $facility);
+        } else {
+            $resource->load('facility.centre');
+        }
 
         if ($lock && $resource->facility->centre_id !== $centreId) {
             throw new BookingSubmissionUnavailable;
@@ -76,13 +87,14 @@ class BookingRequestEngine
         }
 
         $allocationUnits = $allocationUnitsQuery->get();
-        $equipmentById = $this->equipment($equipmentSelections, $lock);
+        $equipmentById = $this->equipment($equipmentSelections, $lock, $resource->facility->centre_id);
 
         return new BookingRequestContext(
             resource: $resource,
             allocationUnits: $allocationUnits,
             equipmentById: $equipmentById,
             equipmentRequirements: $this->equipmentRequirements($equipmentSelections, $equipmentById),
+            locksReservations: $lock,
         );
     }
 
@@ -101,6 +113,7 @@ class BookingRequestEngine
             $context->equipmentRequirements,
             $evaluatedAt,
             $excludedBookingId,
+            lockReservations: $context->locksReservations,
         );
         $pricing = null;
 
@@ -314,7 +327,7 @@ class BookingRequestEngine
      * @param  list<array{equipment_id: int, quantity: int}>  $equipmentSelections
      * @return Collection<int, Equipment>
      */
-    private function equipment(array $equipmentSelections, bool $lock): Collection
+    private function equipment(array $equipmentSelections, bool $lock, int $centreId): Collection
     {
         $equipmentIds = collect($equipmentSelections)->pluck('equipment_id')->sort()->values();
 
@@ -323,6 +336,7 @@ class BookingRequestEngine
         }
 
         $equipmentQuery = Equipment::query()
+            ->where('centre_id', $centreId)
             ->whereKey($equipmentIds)
             ->orderBy('id');
 

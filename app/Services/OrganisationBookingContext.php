@@ -42,14 +42,14 @@ class OrganisationBookingContext
      * Re-authorise organisation booking creation inside the booking transaction.
      *
      * Must be called after the centre reservation lock so locks are taken in the
-     * same centre → customer → organisation order used by approval and invoice terms.
+     * same centre → organisation → customer order used by approval and invoice terms.
      * The membership is read with a locking read so a concurrently committed removal
      * or role change is always observed.
      */
     public function lockForBooking(User $customer, Organisation $organisation): Organisation
     {
-        User::query()->lockForUpdate()->findOrFail($customer->id);
         $organisation = Organisation::query()->lockForUpdate()->findOrFail($organisation->id);
+        User::query()->lockForUpdate()->findOrFail($customer->id);
         $membership = OrganisationMembership::query()
             ->whereBelongsTo($organisation)
             ->whereBelongsTo($customer)

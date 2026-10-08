@@ -71,6 +71,10 @@ class CreateAssistedCustomer
         ])->validate();
 
         $customer = DB::transaction(function () use ($actor, $input, $existingOrganisation, $existingOrganisationRole, $newOrganisationName): User {
+            if ($existingOrganisation !== null) {
+                $existingOrganisation = Organisation::query()->lockForUpdate()->findOrFail($existingOrganisation->id);
+                Gate::forUser($actor)->authorize('addAssistedCustomer', $existingOrganisation);
+            }
             $customer = User::query()->create([
                 'name' => $input['name'],
                 'email' => $input['email'],

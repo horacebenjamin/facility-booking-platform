@@ -7,6 +7,8 @@ use App\Models\Facility;
 use App\Models\Resource;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\DB;
+use LogicException;
 
 class AvailabilityService
 {
@@ -19,6 +21,8 @@ class AvailabilityService
     ) {}
 
     /**
+     * Authoritative callers must hold the centre reservation lock and request current reservation reads.
+     *
      * @param  list<EquipmentRequirement>  $equipmentRequirements
      */
     public function check(
@@ -28,7 +32,11 @@ class AvailabilityService
         array $equipmentRequirements = [],
         ?CarbonInterface $evaluatedAt = null,
         ?int $excludedBookingId = null,
+        bool $lockReservations = false,
     ): AvailabilityResult {
+        if ($lockReservations && DB::transactionLevel() === 0) {
+            throw new LogicException('Authoritative availability requires a reservation transaction.');
+        }
         $startsAt = CarbonImmutable::instance($startsAt)->setTimezone(config('app.timezone'));
         $endsAt = CarbonImmutable::instance($endsAt)->setTimezone(config('app.timezone'));
 
@@ -59,6 +67,7 @@ class AvailabilityService
             $resource,
             $operationalPeriod->startsAt,
             $operationalPeriod->endsAt,
+            $lockReservations,
         )) {
             $reasons[] = AvailabilityReason::Blockout;
         }
@@ -69,6 +78,7 @@ class AvailabilityService
             $operationalPeriod->endsAt,
             $evaluatedAt,
             $excludedBookingId,
+            $lockReservations,
         )) {
             $reasons[] = AvailabilityReason::ResourceConflict;
         }
@@ -82,6 +92,7 @@ class AvailabilityService
                     $endsAt,
                     $evaluatedAt,
                     $excludedBookingId,
+                    $lockReservations,
                 )) {
                 $reasons[] = AvailabilityReason::EquipmentUnavailable;
             }

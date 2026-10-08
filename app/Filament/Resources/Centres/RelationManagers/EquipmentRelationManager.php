@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Centres\RelationManagers;
 use App\Filament\Resources\Concerns\CanManageVenueConfiguration;
 use App\Filament\Resources\Equipment\EquipmentResource;
 use App\Models\Centre;
+use App\Models\Equipment;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -39,7 +40,8 @@ class EquipmentRelationManager extends RelationManager
                 ->mutateDataUsing(fn (array $data): array => $this->authorizeFacility($data)),
         ])->recordActions([
             EditAction::make()->schema($this->equipmentForm())
-                ->mutateDataUsing(fn (array $data): array => $this->authorizeFacility($data)),
+                ->mutateDataUsing(fn (array $data): array => $this->authorizeFacility($data))
+                ->using(fn (EditAction $action, Equipment $record, array $data) => EquipmentResource::updateFromAction($action, $record, $data)),
             DeleteAction::make(),
         ]);
     }

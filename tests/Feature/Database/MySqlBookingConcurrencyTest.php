@@ -2,9 +2,14 @@
 
 namespace Tests\Feature\Database;
 
+use App\Actions\AmendBooking;
+use App\Actions\CreateAvailabilityBlock;
 use App\Actions\CreateBookingRequest;
 use App\Enums\DayOfWeek;
+use App\Events\LifecycleNotificationRequested;
+use App\Exceptions\BookingSubmissionUnavailable;
 use App\Models\AllocationUnit;
+use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\Equipment;
 use App\Models\EquipmentRate;
@@ -23,6 +28,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class MySqlBookingConcurrencyTest extends TestCase
@@ -35,6 +42,7 @@ class MySqlBookingConcurrencyTest extends TestCase
      * @var list<string>
      */
     private const ConcurrentTables = [
+        'centre_user',
         'model_has_roles',
         'model_has_permissions',
         'role_has_permissions',
@@ -46,7 +54,11 @@ class MySqlBookingConcurrencyTest extends TestCase
         'booking_equipment',
         'bookings',
         'booking_series',
+        'availability_block_booking_impacts',
+        'availability_blocks',
         'activity_log',
+        'customer_communications',
+        'notifications',
         'allocation_unit_resource',
         'equipment_rates',
         'resource_rates',
@@ -65,10 +77,12 @@ class MySqlBookingConcurrencyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Event::fake([LifecycleNotificationRequested::class]);
 
         $this->assertSame('mysql', DB::connection()->getDriverName());
         DB::select('select 1');
         config(['database.connections.'.self::ConcurrentConnection => config('database.connections.mysql')]);
+        config(['database.connections.mysql_booking_competitor' => config('database.connections.mysql')]);
     }
 
     protected function tearDown(): void
@@ -83,6 +97,7 @@ class MySqlBookingConcurrencyTest extends TestCase
 
             $connection->statement('SET FOREIGN_KEY_CHECKS=1');
             $connection->disconnect();
+            DB::disconnect('mysql_booking_competitor');
         }
 
         parent::tearDown();
@@ -110,6 +125,167 @@ class MySqlBookingConcurrencyTest extends TestCase
         $this->assertSame(1, $this->countRows('booking_price_snapshots'));
         $this->assertSame(1, $this->countRows('booking_price_lines'));
         $this->assertSame(0, $this->countRows('equipment_allocations'));
+    }
+
+    public function test_an_enclosing_transaction_snapshot_cannot_hide_a_committed_resource_reservation(): void
+    {
+        $fixture = $this->onConcurrentConnection(fn (): array => $this->bookableFixture());
+        $this->assertCommittedReservationIsObserved($fixture, $fixture['resource'], $fixture['resource']);
+    }
+
+    public function test_an_enclosing_transaction_snapshot_cannot_hide_committed_equipment_usage(): void
+    {
+        $fixture = $this->onConcurrentConnection(fn (): array => $this->equipmentFixture());
+        $this->assertCommittedReservationIsObserved(
+            $fixture,
+            $fixture['firstResource'],
+            $fixture['secondResource'],
+            [['equipment_id' => $fixture['equipment']->id, 'quantity' => 3]],
+        );
+    }
+
+    public function test_amendment_observes_a_competing_committed_booking_and_preserves_the_original_request(): void
+    {
+        $this->travelTo('2026-10-01 12:00:00');
+        $fixture = $this->onConcurrentConnection(function (): array {
+            $this->seed(SystemRoleSeeder::class);
+            $fixture = $this->equipmentFixture();
+            $fixture['customer']->assignRole('customer');
+            $booking = app(CreateBookingRequest::class)->handle($fixture['customer'], $fixture['firstResource']->id,
+                CarbonImmutable::parse('2026-10-05 16:00:00'), CarbonImmutable::parse('2026-10-05 17:00:00'));
+
+            return $fixture + ['booking' => $booking, 'snapshot_id' => $booking->priceSnapshot->id];
+        });
+        $this->onConcurrentConnection(function () use ($fixture): void {
+            $this->connection()->beginTransaction();
+            try {
+                Resource::query()->findOrFail($fixture['secondResource']->id);
+                $original = DB::getDefaultConnection();
+                DB::setDefaultConnection('mysql_booking_competitor');
+                try {
+                    app(CreateBookingRequest::class)->handle($fixture['customer'], $fixture['secondResource']->id,
+                        CarbonImmutable::parse('2026-10-05 18:00:00'), CarbonImmutable::parse('2026-10-05 19:00:00'));
+                } finally {
+                    DB::setDefaultConnection($original);
+                }
+                try {
+                    app(AmendBooking::class)->handle($fixture['customer'], $fixture['booking'], $fixture['secondResource']->id,
+                        CarbonImmutable::parse('2026-10-05 18:00:00'), CarbonImmutable::parse('2026-10-05 19:00:00'), 'occurrence');
+                    $this->fail('The competing committed booking must prevent amendment.');
+                } catch (BookingSubmissionUnavailable) {
+                }
+            } finally {
+                $this->connection()->rollBack();
+            }
+            $booking = $fixture['booking']->fresh();
+            $this->assertNotNull($booking);
+            $this->assertSame($fixture['firstResource']->id, $booking->resource_id);
+            $this->assertSame('2026-10-05 16:00:00', $booking->starts_at->toDateTimeString());
+            $this->assertSame($fixture['snapshot_id'], $booking->priceSnapshot->id);
+            $this->assertSame([$fixture['firstResource']->allocationUnits()->sole()->id], $booking->allocationOccupancy->allocationUnits()->pluck('allocation_units.id')->all());
+        });
+        $this->assertSame(2, $this->countRows('bookings'));
+        $this->assertSame(2, $this->countRows('allocation_occupancies'));
+        $this->assertSame(2, $this->countRows('booking_price_snapshots'));
+    }
+
+    #[TestWith([true])]
+    #[TestWith([false])]
+    public function test_closures_and_bookings_observe_commits_after_an_enclosing_transaction_snapshot(bool $closureFirst): void
+    {
+        $fixture = $this->onConcurrentConnection(function (): array {
+            $this->seed(SystemRoleSeeder::class);
+            $fixture = $this->bookableFixture();
+            $manager = User::factory()->create();
+            $manager->assignRole('manager');
+            $manager->assignedCentres()->attach($fixture['resource']->facility->centre_id);
+
+            return $fixture + ['manager' => $manager];
+        });
+        $createClosure = fn () => app(CreateAvailabilityBlock::class)->handle($fixture['manager'], [
+            'centre_id' => $fixture['resource']->facility->centre_id, 'scope' => 'centre', 'type' => 'maintenance',
+            'starts_at' => '2026-10-05 17:00:00', 'ends_at' => '2026-10-05 20:00:00', 'reason' => 'Snapshot regression',
+        ]);
+        $createBooking = function (bool $newFacility = false) use ($fixture): Booking {
+            $resource = $fixture['resource'];
+            if ($newFacility) {
+                $facility = Facility::factory()->create(['centre_id' => $resource->facility->centre_id]);
+                $resource = $this->createBookableResource($facility, 'Newly committed hall');
+                $resource->syncAllocationUnits(AllocationUnit::factory()->for($facility)->create(['code' => 'new-hall']));
+            }
+
+            return app(CreateBookingRequest::class)->handle($fixture['customer'], $resource->id,
+                CarbonImmutable::parse('2026-10-05 18:00'), CarbonImmutable::parse('2026-10-05 19:00'));
+        };
+        $this->onConcurrentConnection(function () use ($fixture, $closureFirst, $createClosure, $createBooking): void {
+            $this->connection()->beginTransaction();
+            try {
+                Resource::query()->findOrFail($fixture['resource']->id);
+                $original = DB::getDefaultConnection();
+                DB::setDefaultConnection('mysql_booking_competitor');
+                try {
+                    $closureFirst ? $createClosure() : $createBooking(newFacility: true);
+                } finally {
+                    DB::setDefaultConnection($original);
+                }
+                if ($closureFirst) {
+                    try {
+                        $createBooking();
+                        $this->fail('The committed closure must block the request even with an earlier snapshot.');
+                    } catch (BookingSubmissionUnavailable) {
+                        $this->assertSame(1, $this->connection()->transactionLevel());
+                    }
+                } else {
+                    $block = $createClosure();
+                    $this->assertSame(1, $block->impacts()->count(), 'The committed booking must receive a closure impact.');
+                }
+            } finally {
+                $this->connection()->rollBack();
+            }
+        });
+        $this->assertSame($closureFirst ? 0 : 1, $this->countRows('bookings'));
+        $this->assertSame($closureFirst ? 1 : 0, $this->countRows('availability_blocks'));
+    }
+
+    /**
+     * @param  array{customer: User}  $fixture
+     * @param  list<array{equipment_id: int, quantity: int}>  $equipment
+     */
+    private function assertCommittedReservationIsObserved(array $fixture, Resource $first, Resource $second, array $equipment = []): void
+    {
+        $this->onConcurrentConnection(function () use ($fixture, $first, $second, $equipment): void {
+            $this->connection()->beginTransaction();
+            try {
+                Resource::query()->findOrFail($first->id);
+                $original = DB::getDefaultConnection();
+                DB::setDefaultConnection('mysql_booking_competitor');
+                try {
+                    app(CreateBookingRequest::class)->handle(
+                        $fixture['customer'], $first->id,
+                        CarbonImmutable::parse('2026-10-05 18:00:00'),
+                        CarbonImmutable::parse('2026-10-05 19:30:00'), $equipment,
+                    );
+                } finally {
+                    DB::setDefaultConnection($original);
+                }
+
+                try {
+                    app(CreateBookingRequest::class)->handle(
+                        $fixture['customer'], $second->id,
+                        CarbonImmutable::parse('2026-10-05 18:00:00'),
+                        CarbonImmutable::parse('2026-10-05 19:30:00'), $equipment,
+                    );
+                    $this->fail('A reservation committed after the transaction snapshot must still prevent double allocation.');
+                } catch (BookingSubmissionUnavailable) {
+                    $this->assertSame(1, $this->connection()->transactionLevel());
+                }
+            } finally {
+                $this->connection()->rollBack();
+            }
+        });
+        $this->assertSame(1, $this->countRows('bookings'));
+        $this->assertSame(1, $this->countRows('allocation_occupancies'));
+        $this->assertSame(1, $this->countRows('booking_price_snapshots'));
     }
 
     public function test_simultaneous_whole_hall_and_court_requests_contend_for_the_shared_allocation_unit(): void

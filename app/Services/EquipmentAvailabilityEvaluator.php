@@ -17,6 +17,7 @@ class EquipmentAvailabilityEvaluator
         CarbonInterface $endsAt,
         ?CarbonInterface $evaluatedAt = null,
         ?int $excludedBookingId = null,
+        bool $lockReservations = false,
     ): bool {
         $requestedPeriod = $this->normaliseRequestedPeriod($startsAt, $endsAt);
 
@@ -45,8 +46,9 @@ class EquipmentAvailabilityEvaluator
             });
         }
 
-        $allocatedQuantity = $allocatedQuantity
-            ->sum('quantity');
+        $allocatedQuantity = $lockReservations
+            ? $allocatedQuantity->orderBy('id')->lockForUpdate()->get(['id', 'quantity'])->sum('quantity')
+            : $allocatedQuantity->sum('quantity');
 
         return $allocatedQuantity + $requestedQuantity <= $equipment->quantity;
     }
