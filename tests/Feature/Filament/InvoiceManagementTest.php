@@ -3,6 +3,7 @@
 namespace Tests\Feature\Filament;
 
 use App\Actions\IssueInvoice;
+use App\Actions\RecordManualInvoicePayment;
 use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
@@ -20,6 +21,7 @@ use App\Models\InvoiceLine;
 use App\Models\Payment;
 use App\Models\User;
 use Database\Seeders\SystemRoleSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\TestWith;
@@ -136,6 +138,25 @@ class InvoiceManagementTest extends TestCase
 
         $this->assertDatabaseCount('payments', 0);
         $this->assertSame(InvoiceStatus::Issued, $invoice->fresh()->status);
+    }
+
+    public function test_operations_payment_permission_cannot_settle_a_management_invoice(): void
+    {
+        $booking = $this->invoiceBooking();
+        $invoice = app(IssueInvoice::class)->handle($this->manager($booking), [$booking->id]);
+        $assistant = User::factory()->create();
+        $assistant->assignRole('leisure-assistant');
+        $assistant->assignedCentres()->attach($booking->centre_id);
+
+        $this->assertTrue($assistant->can('payments.record'));
+        $this->expectException(AuthorizationException::class);
+
+        try {
+            app(RecordManualInvoicePayment::class)->handle($assistant, $invoice, 'FORGED-SETTLEMENT', 'Attempted from operations');
+        } finally {
+            $this->assertDatabaseCount('payments', 0);
+            $this->assertSame(InvoiceStatus::Issued, $invoice->fresh()->status);
+        }
     }
 
     #[TestWith(['customer'])]

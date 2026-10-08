@@ -18,12 +18,12 @@ class BookingPolicy
 
     public function manageInvoiceTerms(User $user, Booking $booking): bool
     {
-        return $user->can('invoices.manage') && $user->isAssignedToCentre($booking->centre);
+        return $user->hasRole('manager') && $user->can('invoices.manage') && $user->isAssignedToCentre($booking->centre);
     }
 
     public function viewPayment(User $user, Booking $booking): bool
     {
-        return $user->can('bookings.view') && $this->canManageFinance($user, $booking);
+        return $user->hasRole('customer') && $user->can('bookings.view') && $this->canManageFinance($user, $booking);
     }
 
     public function viewCustomer(User $user, Booking $booking): bool
@@ -49,12 +49,12 @@ class BookingPolicy
 
     public function pay(User $user, Booking $booking): bool
     {
-        return $user->can('payments.initiate') && $this->canManageFinance($user, $booking);
+        return $user->hasRole('customer') && $user->can('payments.initiate') && $this->canManageFinance($user, $booking);
     }
 
     public function viewAny(User $user): bool
     {
-        return $user->can('bookings.view') && $user->assignedCentres()->exists();
+        return $user->hasRole('manager') && $user->can('bookings.view') && $user->assignedCentres()->exists();
     }
 
     public function createManual(User $user): bool
@@ -66,17 +66,19 @@ class BookingPolicy
 
     public function view(User $user, Booking $booking): bool
     {
-        return $user->can('bookings.view') && $user->isAssignedToCentre($booking->centre);
+        return ($user->hasRole('manager') || $user->hasRole('leisure-assistant'))
+            && $user->can('bookings.view')
+            && $user->isAssignedToCentre($booking->centre);
     }
 
     public function approve(User $user, Booking $booking): bool
     {
-        return $user->can('bookings.approve') && $user->isAssignedToCentre($booking->centre);
+        return $user->hasRole('manager') && $user->can('bookings.approve') && $user->isAssignedToCentre($booking->centre);
     }
 
     public function reject(User $user, Booking $booking): bool
     {
-        return $user->can('bookings.approve') && $user->isAssignedToCentre($booking->centre);
+        return $user->hasRole('manager') && $user->can('bookings.approve') && $user->isAssignedToCentre($booking->centre);
     }
 
     private function canViewForCustomer(User $user, Booking $booking): bool

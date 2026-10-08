@@ -201,6 +201,10 @@ class DocumentDownloadTest extends TestCase
         $this->get(route('management.documents.invoices', $invoice))->assertOk();
         $this->get(route('management.documents.bookings', $booking))->assertOk();
         $this->get(route('management.documents.receipts', $payment))->assertOk();
+        $manager->assignedCentres()->detach($booking->centre_id);
+        $this->get(route('management.documents.invoices', $invoice))->assertForbidden();
+        $this->get(route('management.documents.bookings', $booking))->assertForbidden();
+        $this->get(route('management.documents.receipts', $payment))->assertForbidden();
         $assistant = User::factory()->create();
         $assistant->assignRole('leisure-assistant');
         $assistant->assignedCentres()->attach($booking->centre_id);

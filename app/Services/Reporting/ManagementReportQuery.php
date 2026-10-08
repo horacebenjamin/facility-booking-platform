@@ -403,7 +403,7 @@ class ManagementReportQuery
 
     private function assertManager(User $manager): void
     {
-        if (! $manager->hasRole('manager') || ! $manager->can('bookings.view')) {
+        if (! $manager->hasRole('manager') || ! $manager->can('bookings.view') || ! $manager->can('reports.view')) {
             throw new AuthorizationException;
         }
     }

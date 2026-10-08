@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
+use App\Policies\ExportPolicy;
 use Carbon\CarbonImmutable;
+use Filament\Actions\Exports\Models\Export;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Cashier\Cashier;
@@ -26,6 +29,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Gate::policy(Export::class, ExportPolicy::class);
 
         DevCommands::artisan('queue:listen --queue=notifications,default --tries=5 --timeout=30', 'queue');
     }

@@ -14,6 +14,7 @@ use BackedEnum;
 use Carbon\CarbonImmutable;
 use Filament\Actions\ExportAction;
 use Filament\Actions\Exports\Enums\ExportFormat;
+use Filament\Actions\Exports\Models\Export;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
@@ -70,7 +71,8 @@ class Reporting extends Page
 
         return $user instanceof User
             && $user->hasRole('manager')
-            && $user->can('bookings.view');
+            && $user->can('bookings.view')
+            && $user->can('reports.view');
     }
 
     public function mount(): void
@@ -102,6 +104,7 @@ class Reporting extends Page
                 ->label('Export settled card payments')
                 ->exporter(PaymentExporter::class)
                 ->formats([ExportFormat::Xlsx])
+                ->fileName(fn (Export $export): string => $this->scopeExport($export))
                 ->modifyQueryUsing(fn ($query) => $this->reportQuery()->paymentExportQuery($this->manager(), $this->filters())),
             ExportAction::make('exportBookings')
                 ->color('gray')
@@ -109,6 +112,7 @@ class Reporting extends Page
                 ->label('Export bookings')
                 ->exporter(BookingExporter::class)
                 ->formats([ExportFormat::Xlsx])
+                ->fileName(fn (Export $export): string => $this->scopeExport($export))
                 ->modifyQueryUsing(fn ($query) => $this->reportQuery()->bookingExportQuery($this->manager(), $this->filters())),
             ExportAction::make('exportFinance')
                 ->color('gray')
@@ -116,6 +120,7 @@ class Reporting extends Page
                 ->label('Export invoices')
                 ->exporter(InvoiceExporter::class)
                 ->formats([ExportFormat::Xlsx])
+                ->fileName(fn (Export $export): string => $this->scopeExport($export))
                 ->modifyQueryUsing(fn ($query) => $this->reportQuery()->invoiceExportQuery($this->manager(), $this->filters())),
         ];
     }
@@ -242,9 +247,18 @@ class Reporting extends Page
     private function manager(): User
     {
         $manager = auth()->user();
-        abort_unless($manager instanceof User, 403);
+        abort_unless($manager instanceof User && static::canAccess(), 403);
 
         return $manager;
+    }
+
+    private function scopeExport(Export $export): string
+    {
+        $centreIds = $this->manager()->assignedCentres()->pluck('centres.id')->sort()->values()->all();
+        $export->authorized_centre_ids = json_encode($centreIds, JSON_THROW_ON_ERROR);
+        $export->save();
+
+        return $export->getExporter([], [])->getFileName($export);
     }
 
     private function reportQuery(): ManagementReportQuery

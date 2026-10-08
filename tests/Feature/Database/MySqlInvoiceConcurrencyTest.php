@@ -16,6 +16,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class MySqlInvoiceConcurrencyTest extends TestCase
@@ -56,6 +57,7 @@ class MySqlInvoiceConcurrencyTest extends TestCase
                     $db->table('bookings')->where('id', $this->ids['second_booking'])->delete();
                 }
                 $db->table('centre_user')->where('user_id', $this->ids['manager'])->delete();
+                $db->table('model_has_roles')->where('model_type', User::class)->where('model_id', $this->ids['manager'])->delete();
                 $db->table('model_has_permissions')->where('model_type', User::class)->where('model_id', $this->ids['manager'])->delete();
                 $db->table('users')->where('id', $this->ids['manager'])->delete();
                 $db->table('allocation_occupancy_allocation_unit')->where('allocation_occupancy_id', $this->ids['occupancy'])->delete();
@@ -68,6 +70,10 @@ class MySqlInvoiceConcurrencyTest extends TestCase
                 }
                 $db->table('model_has_permissions')->where('model_type', User::class)->where('model_id', $this->ids['customer'])->delete();
                 $db->table('users')->where('id', $this->ids['customer'])->delete();
+                if (isset($this->ids['created_role'])) {
+                    $db->table('role_has_permissions')->where('role_id', $this->ids['created_role'])->delete();
+                    $db->table('roles')->where('id', $this->ids['created_role'])->delete();
+                }
                 foreach (['permission_invoices.manage', 'permission_payments.record'] as $key) {
                     if (isset($this->ids[$key])) {
                         $db->table('permissions')->where('id', $this->ids[$key])->delete();
@@ -138,6 +144,11 @@ class MySqlInvoiceConcurrencyTest extends TestCase
                 'billing_method' => 'invoice', 'invoice_term_days' => 30,
             ]);
             $manager = User::factory()->create();
+            $role = Role::findOrCreate('manager', 'web');
+            $manager->assignRole($role);
+            if ($role->wasRecentlyCreated) {
+                $this->ids['created_role'] = $role->id;
+            }
             $manager->assignedCentres()->attach($booking->centre_id);
             foreach (['invoices.manage', 'payments.record'] as $permissionName) {
                 $permission = Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);

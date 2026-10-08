@@ -2274,6 +2274,25 @@ Attempts to bypass important security boundaries fail safely.
 
 Important security assumptions have been deliberately challenged and protected by regression tests.
 
+## M23 Implementation Outcome
+
+- Reviewed customer, organisation, management and operations entry points,
+  including documents, payments, reporting, onboarding and Livewire actions.
+- Enforced management role plus capability for invoice settlement, booking
+  decisions, pricing configuration and reporting.
+- Scoped venue configuration to live centre assignments, including forged form
+  identifiers, nested equipment actions and actions mounted before assignment
+  revocation. Pricing overrides require the manager role as well as the pricing
+  capability and centre assignment.
+- Bound private report downloads to the creator's current reporting permission
+  and the centre assignments captured when the export was made. Existing exports
+  without captured scope must be regenerated.
+- Kept customer financial documents and organisation records on the existing
+  live membership policies. Retained the explicit global assisted onboarding
+  permission because organisations have no centre ownership model.
+- Deferred broader concurrency proofs to M24 and infrastructure headers,
+  cookies and secret rotation to production readiness.
+
 ---
 
 # M24 — Concurrency & Data Integrity Hardening

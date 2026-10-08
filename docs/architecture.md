@@ -802,6 +802,30 @@ server-side authorization.
 
 Hiding a menu item or button is never sufficient authorization.
 
+### 12.6 M23 Authorization Hardening
+
+Protected operations require the relevant system role and capability, followed
+by a record policy or scoped query. Customer organisation access comes from the
+current membership and its organisation role; the initiating `customer_id` does
+not grant access to an organisation-owned booking or invoice. Staff access to
+centre records uses current assignments, including during Filament actions and
+document downloads. Centre creation assigns its management creator so the new
+venue can be configured without a global edit exception.
+Facility and equipment form actions validate submitted parent IDs against the
+current venue hierarchy before saving. Price overrides require the manager role,
+pricing capability and a live assignment to the resource's centre.
+
+Reporting requires `reports.view` as well as management booking visibility.
+Private Filament exports retain the centre IDs authorised at creation and are
+downloadable only by their creator while that manager still has the reporting
+capability and every recorded centre assignment. Older exports without scope
+metadata must be regenerated. The operations payment capability does not grant
+management invoice settlement.
+
+Broader booking and payment concurrency proofs remain in M24. CSP, HSTS,
+reverse-proxy settings, production cookie configuration and secret rotation
+remain production-readiness work.
+
 ------------------------------------------------------------------------
 
 ## 13. Database and Concurrency

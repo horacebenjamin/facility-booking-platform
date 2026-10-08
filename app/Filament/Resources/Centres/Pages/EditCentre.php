@@ -10,6 +10,13 @@ class EditCentre extends EditRecord
 {
     protected static string $resource = CentreResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        abort_unless(CentreResource::canEdit($this->getRecord()), 403);
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [DeleteAction::make()];

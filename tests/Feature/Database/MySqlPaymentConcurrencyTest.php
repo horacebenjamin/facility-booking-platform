@@ -14,6 +14,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class MySqlPaymentConcurrencyTest extends TestCase
@@ -55,7 +56,12 @@ class MySqlPaymentConcurrencyTest extends TestCase
                     $db->table($table)->where('id', $this->ids[$key])->delete();
                 }
                 $db->table('model_has_permissions')->where('model_type', User::class)->where('model_id', $this->ids['customer'])->delete();
+                $db->table('model_has_roles')->where('model_type', User::class)->where('model_id', $this->ids['customer'])->delete();
                 $db->table('users')->where('id', $this->ids['customer'])->delete();
+                if (isset($this->ids['created_role'])) {
+                    $db->table('role_has_permissions')->where('role_id', $this->ids['created_role'])->delete();
+                    $db->table('roles')->where('id', $this->ids['created_role'])->delete();
+                }
                 if (isset($this->ids['permission'])) {
                     $db->table('permissions')->where('id', $this->ids['permission'])->delete();
                 }
@@ -122,6 +128,11 @@ class MySqlPaymentConcurrencyTest extends TestCase
                 'starts_at' => now()->addDays(4), 'ends_at' => now()->addDays(4)->addHours(2),
                 'status' => 'approved', 'financial_status' => 'awaiting_payment', 'payment_due_at' => now()->addDay(),
             ]);
+            $role = Role::findOrCreate('customer', 'web');
+            $booking->customer->assignRole($role);
+            if ($role->wasRecentlyCreated) {
+                $this->ids['created_role'] = $role->id;
+            }
             $permission = Permission::query()->where('name', 'payments.initiate')->where('guard_name', 'web')->first();
             if ($permission === null) {
                 $permission = Permission::create(['name' => 'payments.initiate', 'guard_name' => 'web']);

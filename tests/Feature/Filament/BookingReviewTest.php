@@ -146,6 +146,7 @@ class BookingReviewTest extends TestCase
         $leisureAssistant = User::factory()->create();
         $leisureAssistant->assignRole('leisure-assistant');
         $leisureAssistant->assignedCentres()->attach($booking->centre);
+        $leisureAssistant->givePermissionTo('bookings.approve');
 
         $this->expectException(AuthorizationException::class);
 

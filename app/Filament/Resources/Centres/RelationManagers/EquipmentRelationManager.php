@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Centres\RelationManagers;
 
 use App\Filament\Resources\Concerns\CanManageVenueConfiguration;
+use App\Filament\Resources\Equipment\EquipmentResource;
 use App\Models\Centre;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -34,9 +35,11 @@ class EquipmentRelationManager extends RelationManager
             TextColumn::make('quantity')->numeric(),
             IconColumn::make('is_active')->label('Active')->boolean(),
         ])->headerActions([
-            CreateAction::make()->schema($this->equipmentForm()),
+            CreateAction::make()->schema($this->equipmentForm())
+                ->mutateDataUsing(fn (array $data): array => $this->authorizeFacility($data)),
         ])->recordActions([
-            EditAction::make()->schema($this->equipmentForm()),
+            EditAction::make()->schema($this->equipmentForm())
+                ->mutateDataUsing(fn (array $data): array => $this->authorizeFacility($data)),
             DeleteAction::make(),
         ]);
     }
@@ -64,5 +67,18 @@ class EquipmentRelationManager extends RelationManager
         assert($owner instanceof Centre);
 
         return $owner;
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function authorizeFacility(array $data): array
+    {
+        abort_unless(EquipmentResource::canUseLocation(
+            $this->centre()->id,
+            isset($data['facility_id']) ? EquipmentResource::validatedId($data['facility_id']) : null,
+        ), 403);
+
+        return $data;
     }
 }

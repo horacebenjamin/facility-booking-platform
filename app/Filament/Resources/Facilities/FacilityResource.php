@@ -23,6 +23,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rules\Unique;
 
 class FacilityResource extends VenueConfigurationResource
@@ -35,7 +36,9 @@ class FacilityResource extends VenueConfigurationResource
     {
         return $schema->components([
             Section::make('Facility details')->schema([
-                Select::make('centre_id')->relationship('centre', 'name')->required()->searchable()->preload(),
+                Select::make('centre_id')->relationship('centre', 'name',
+                    modifyQueryUsing: fn (Builder $query): Builder => $query->whereHas('assignedUsers', fn (Builder $assigned): Builder => $assigned->whereKey(auth()->id())),
+                )->required()->searchable()->preload(),
                 TextInput::make('name')->required()->maxLength(255),
                 TextInput::make('slug')->required()->maxLength(255)->unique(
                     ignoreRecord: true,
@@ -56,7 +59,9 @@ class FacilityResource extends VenueConfigurationResource
             TextColumn::make('capacity')->numeric(),
             IconColumn::make('is_active')->label('Active')->boolean(),
         ])->filters([
-            SelectFilter::make('centre')->relationship('centre', 'name'),
+            SelectFilter::make('centre')->relationship('centre', 'name',
+                modifyQueryUsing: fn (Builder $query): Builder => $query->whereHas('assignedUsers', fn (Builder $assigned): Builder => $assigned->whereKey(auth()->id())),
+            ),
         ])->recordActions([EditAction::make(), DeleteAction::make()]);
     }
 

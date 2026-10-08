@@ -7,6 +7,7 @@ use App\Filament\Resources\Centres\CentreResource;
 use App\Filament\Resources\Centres\Pages\CreateCentre;
 use App\Filament\Resources\Centres\Pages\EditCentre;
 use App\Filament\Resources\Centres\RelationManagers\AssignedUsersRelationManager;
+use App\Filament\Resources\Centres\RelationManagers\EquipmentRelationManager;
 use App\Filament\Resources\Centres\RelationManagers\OperatingHoursRelationManager as CentreOperatingHoursRelationManager;
 use App\Filament\Resources\Equipment\Pages\CreateEquipment;
 use App\Filament\Resources\Facilities\Pages\CreateFacility;
@@ -52,6 +53,56 @@ class VenueConfigurationTest extends TestCase
         $this->actingAs($leisureAssistant)->get(CentreResource::getUrl())->assertForbidden();
     }
 
+    public function test_manager_cannot_read_or_change_an_unassigned_centres_configuration(): void
+    {
+        $local = Centre::factory()->create(['name' => 'Local Centre']);
+        $foreign = Centre::factory()->create(['name' => 'Foreign Centre']);
+        $manager = $this->manager();
+        $manager->assignedCentres()->attach($local);
+        $this->actingAs($manager);
+
+        $this->get(CentreResource::getUrl())->assertOk()->assertSee('Local Centre')->assertDontSee('Foreign Centre');
+        $this->get(CentreResource::getUrl('edit', ['record' => $foreign]))->assertNotFound();
+        Livewire::test(CreateFacility::class)
+            ->fillForm(['centre_id' => $foreign->id, 'name' => 'Foreign Hall', 'slug' => 'foreign-hall'])
+            ->call('create')
+            ->assertHasFormErrors(['centre_id']);
+
+        $this->assertDatabaseMissing('facilities', ['centre_id' => $foreign->id, 'name' => 'Foreign Hall']);
+    }
+
+    public function test_losing_centre_assignment_blocks_an_already_open_edit_form(): void
+    {
+        $centre = Centre::factory()->create(['name' => 'Assigned Centre']);
+        $manager = $this->manager();
+        $manager->assignedCentres()->attach($centre);
+        $this->actingAs($manager);
+        $form = Livewire::test(EditCentre::class, ['record' => $centre->getRouteKey()])
+            ->fillForm(['name' => 'Unauthorized update']);
+
+        $manager->assignedCentres()->detach($centre);
+
+        $form->call('save')->assertForbidden();
+        $this->assertSame('Assigned Centre', $centre->fresh()->name);
+    }
+
+    public function test_losing_centre_assignment_blocks_an_already_open_relation_action(): void
+    {
+        $centre = Centre::factory()->create();
+        $manager = $this->manager();
+        $manager->assignedCentres()->attach($centre);
+        $this->actingAs($manager);
+        $hours = Livewire::test(CentreOperatingHoursRelationManager::class, [
+            'ownerRecord' => $centre,
+            'pageClass' => EditCentre::class,
+        ]);
+
+        $manager->assignedCentres()->detach($centre);
+
+        $hours->call('mountTableAction', 'create')->assertForbidden();
+        $this->assertDatabaseCount('centre_operating_hours', 0);
+    }
+
     public function test_manager_can_create_and_update_a_centre(): void
     {
         $this->actingAs($this->manager());
@@ -73,8 +124,10 @@ class VenueConfigurationTest extends TestCase
 
     public function test_manager_can_configure_facilities_resources_equipment_and_active_state(): void
     {
-        $this->actingAs($this->manager());
+        $manager = $this->manager();
+        $this->actingAs($manager);
         $centre = Centre::factory()->create();
+        $manager->assignedCentres()->attach($centre);
 
         Livewire::test(CreateFacility::class)
             ->fillForm([
@@ -160,10 +213,32 @@ class VenueConfigurationTest extends TestCase
         $this->assertDatabaseMissing('equipment', ['name' => 'Invalid equipment']);
     }
 
+    public function test_centre_equipment_action_rejects_a_facility_from_another_centre(): void
+    {
+        $manager = $this->manager();
+        $centre = Centre::factory()->create();
+        $foreignFacility = Facility::factory()->create();
+        $manager->assignedCentres()->attach($centre);
+        $this->actingAs($manager);
+
+        Livewire::test(EquipmentRelationManager::class, [
+            'ownerRecord' => $centre,
+            'pageClass' => EditCentre::class,
+        ])->callAction(TestAction::make('create')->table(), [
+            'facility_id' => $foreignFacility->id,
+            'name' => 'Forged equipment',
+            'quantity' => 1,
+        ])->assertHasActionErrors(['facility_id']);
+
+        $this->assertDatabaseMissing('equipment', ['name' => 'Forged equipment']);
+    }
+
     public function test_manager_can_attach_a_resource_to_an_allocation_unit_from_its_facility_only(): void
     {
-        $this->actingAs($this->manager());
+        $manager = $this->manager();
+        $this->actingAs($manager);
         $facility = Facility::factory()->create();
+        $manager->assignedCentres()->attach($facility->centre_id);
         $resource = Resource::factory()->for($facility)->create();
         $validAllocationUnit = AllocationUnit::factory()->for($facility)->create();
         $invalidAllocationUnit = AllocationUnit::factory()->create();
@@ -191,8 +266,10 @@ class VenueConfigurationTest extends TestCase
 
     public function test_manager_can_configure_each_kind_of_weekly_hours_and_invalid_ranges_fail_validation(): void
     {
-        $this->actingAs($this->manager());
+        $manager = $this->manager();
+        $this->actingAs($manager);
         $centre = Centre::factory()->create();
+        $manager->assignedCentres()->attach($centre);
         $facility = Facility::factory()->for($centre)->create();
         $resource = Resource::factory()->for($facility)->create();
 
@@ -240,8 +317,10 @@ class VenueConfigurationTest extends TestCase
 
     public function test_manager_can_assign_staff_without_changing_roles(): void
     {
-        $this->actingAs($this->manager());
+        $manager = $this->manager();
+        $this->actingAs($manager);
         $centre = Centre::factory()->create();
+        $manager->assignedCentres()->attach($centre);
         $staffMember = User::factory()->create();
         $staffMember->assignRole('leisure-assistant');
         $customer = User::factory()->create();

@@ -6,7 +6,9 @@ use App\Filament\Resources\Equipment\Pages\CreateEquipment;
 use App\Filament\Resources\Equipment\Pages\EditEquipment;
 use App\Filament\Resources\Equipment\Pages\ListEquipment;
 use App\Filament\Resources\VenueConfigurationResource;
+use App\Models\Centre;
 use App\Models\Equipment;
+use App\Models\Facility;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -29,11 +31,22 @@ class EquipmentResource extends VenueConfigurationResource
 
     protected static bool $shouldRegisterNavigation = false;
 
+    public static function canUseLocation(int $centreId, ?int $facilityId): bool
+    {
+        $centre = Centre::query()->find($centreId);
+
+        return $centre !== null
+            && static::canConfigureCentre($centre)
+            && ($facilityId === null || Facility::query()->whereKey($facilityId)->where('centre_id', $centreId)->exists());
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
             Section::make('Equipment details')->schema([
-                Select::make('centre_id')->relationship('centre', 'name')->required()->searchable()->preload()->live()
+                Select::make('centre_id')->relationship('centre', 'name',
+                    modifyQueryUsing: fn (Builder $query): Builder => $query->whereHas('assignedUsers', fn (Builder $assigned): Builder => $assigned->whereKey(auth()->id())),
+                )->required()->searchable()->preload()->live()
                     ->afterStateUpdated(fn (Set $set) => $set('facility_id', null)),
                 Select::make('facility_id')->relationship(
                     'facility',
@@ -57,7 +70,9 @@ class EquipmentResource extends VenueConfigurationResource
             TextColumn::make('quantity')->numeric(),
             IconColumn::make('is_active')->label('Active')->boolean(),
         ])->filters([
-            SelectFilter::make('centre')->relationship('centre', 'name'),
+            SelectFilter::make('centre')->relationship('centre', 'name',
+                modifyQueryUsing: fn (Builder $query): Builder => $query->whereHas('assignedUsers', fn (Builder $assigned): Builder => $assigned->whereKey(auth()->id())),
+            ),
         ])->recordActions([EditAction::make(), DeleteAction::make()]);
     }
 

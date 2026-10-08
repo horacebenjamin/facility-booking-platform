@@ -9,12 +9,12 @@ class InvoicePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('invoices.view') && $user->assignedCentres()->exists();
+        return $user->hasRole('manager') && $user->can('invoices.view') && $user->assignedCentres()->exists();
     }
 
     public function view(User $user, Invoice $invoice): bool
     {
-        return $user->can('invoices.view') && $this->hasCentreScope($user, $invoice);
+        return $user->hasRole('manager') && $user->can('invoices.view') && $this->hasCentreScope($user, $invoice);
     }
 
     public function viewCustomer(User $user, Invoice $invoice): bool
@@ -32,12 +32,12 @@ class InvoicePolicy
 
     public function create(User $user): bool
     {
-        return $user->can('invoices.manage') && $user->assignedCentres()->exists();
+        return $user->hasRole('manager') && $user->can('invoices.manage') && $user->assignedCentres()->exists();
     }
 
     public function recordPayment(User $user, Invoice $invoice): bool
     {
-        return $user->can('payments.record') && $this->hasCentreScope($user, $invoice);
+        return $user->hasRole('manager') && $user->can('payments.record') && $this->hasCentreScope($user, $invoice);
     }
 
     private function hasCentreScope(User $user, Invoice $invoice): bool

@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources\Concerns;
 
+use App\Filament\Resources\VenueConfigurationResource;
 use Illuminate\Database\Eloquent\Model;
 
 trait CanManageVenueConfiguration
 {
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return auth()->user()?->can('facilities.manage') ?? false;
+        return VenueConfigurationResource::canView($ownerRecord);
     }
 }

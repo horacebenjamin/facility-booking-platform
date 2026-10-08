@@ -38,6 +38,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ManagementReportingTest extends TestCase
@@ -333,6 +334,22 @@ class ManagementReportingTest extends TestCase
         $this->actingAs($customer)->get(Reporting::getUrl(panel: 'management'))->assertForbidden();
     }
 
+    public function test_revoked_reporting_capability_blocks_the_page_and_export_query(): void
+    {
+        [$manager, $centre] = $this->managerVenue('Riverside');
+        $this->actingAs($manager)->get(Reporting::getUrl(panel: 'management'))->assertOk();
+
+        Role::findByName('manager')->revokePermissionTo('reports.view');
+
+        $this->get(Reporting::getUrl(panel: 'management'))->assertForbidden();
+        try {
+            app(ManagementReportQuery::class)->bookingExportQuery($manager, $this->filters($centre));
+            $this->fail('Revoked reporting permission must block export queries.');
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+    }
+
     public function test_invalid_or_unbounded_dates_show_errors_and_block_exports(): void
     {
         Storage::fake('local');
@@ -445,6 +462,7 @@ class ManagementReportingTest extends TestCase
         $this->assertSame(2, $export->total_rows);
         $this->assertSame(2, $export->successful_rows);
         $this->assertNotNull($export->completed_at);
+        $this->assertSame([$manager->assignedCentres()->sole()->id], json_decode($export->authorized_centre_ids, true));
         Storage::disk('local')->assertExists($export->getFileDirectory().'/'.$export->file_name.'.xlsx');
     }
 
@@ -469,16 +487,29 @@ class ManagementReportingTest extends TestCase
     public function test_only_the_exporting_manager_can_download_the_private_file(): void
     {
         Storage::fake('local');
-        [$owner] = $this->managerVenue('Riverside');
-        [$otherManager] = $this->managerVenue('Hillside');
+        [$owner, $riverside] = $this->managerVenue('Riverside');
+        [$otherManager, $hillside] = $this->managerVenue('Hillside');
+        $owner->assignedCentres()->attach($hillside);
         $export = new Export;
-        $export->forceFill(['user_id' => $owner->id, 'exporter' => BookingExporter::class, 'file_disk' => 'local', 'file_name' => 'bookings', 'total_rows' => 1, 'successful_rows' => 1, 'completed_at' => now()])->save();
+        $export->forceFill(['user_id' => $owner->id, 'exporter' => BookingExporter::class, 'file_disk' => 'local', 'file_name' => 'bookings', 'total_rows' => 1, 'successful_rows' => 1, 'completed_at' => now(), 'authorized_centre_ids' => json_encode([$riverside->id, $hillside->id])])->save();
         Storage::disk('local')->put($export->getFileDirectory().'/bookings.xlsx', 'xlsx-bytes');
         $url = route('filament.exports.download', ['export' => $export, 'format' => 'xlsx']);
 
         $this->get($url)->assertUnauthorized();
         $this->actingAs($otherManager)->get($url)->assertForbidden();
         $this->actingAs($owner)->get($url)->assertOk()->assertDownload('bookings.xlsx');
+
+        $owner->assignedCentres()->detach($hillside);
+        $this->get($url)->assertForbidden();
+        $owner->assignedCentres()->attach($hillside);
+        $this->get($url)->assertOk();
+
+        $legacy = new Export;
+        $legacy->forceFill(['user_id' => $owner->id, 'exporter' => BookingExporter::class, 'file_disk' => 'local', 'file_name' => 'old-bookings', 'total_rows' => 1, 'successful_rows' => 1, 'completed_at' => now()])->save();
+        $this->get(route('filament.exports.download', ['export' => $legacy, 'format' => 'xlsx']))->assertForbidden();
+
+        Role::findByName('manager')->revokePermissionTo('reports.view');
+        $this->get($url)->assertForbidden();
     }
 
     /** @return array{User, Centre, resource} */

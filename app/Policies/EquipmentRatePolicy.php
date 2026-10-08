@@ -9,18 +9,18 @@ class EquipmentRatePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('pricing.manage');
+        return $user->hasRole('manager') && $user->can('pricing.manage');
     }
 
     public function view(User $user, EquipmentRate $equipmentRate): bool
     {
-        return $user->can('pricing.manage')
+        return $user->hasRole('manager') && $user->can('pricing.manage')
             && $user->isAssignedToCentre($equipmentRate->equipment->centre);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('pricing.manage') && $user->assignedCentres()->exists();
+        return $user->hasRole('manager') && $user->can('pricing.manage') && $user->assignedCentres()->exists();
     }
 
     public function update(User $user, EquipmentRate $equipmentRate): bool

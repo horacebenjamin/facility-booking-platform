@@ -192,7 +192,9 @@ class PricingService
 
         $centre = $request->resource->facility->centre;
 
-        if (! $override->actor->can('pricing.manage') || ! $override->actor->isAssignedToCentre($centre)) {
+        if (! $override->actor->hasRole('manager')
+            || ! $override->actor->can('pricing.manage')
+            || ! $override->actor->isAssignedToCentre($centre)) {
             return $this->failure(PricingFailureReason::UnauthorizedOverride);
         }
 

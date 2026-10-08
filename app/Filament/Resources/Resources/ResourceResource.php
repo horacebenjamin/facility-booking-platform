@@ -21,6 +21,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rules\Unique;
 
 class ResourceResource extends VenueConfigurationResource
@@ -33,7 +34,9 @@ class ResourceResource extends VenueConfigurationResource
     {
         return $schema->components([
             Section::make('Resource details')->schema([
-                Select::make('facility_id')->relationship('facility', 'name')->required()->searchable()->preload(),
+                Select::make('facility_id')->relationship('facility', 'name',
+                    modifyQueryUsing: fn (Builder $query): Builder => $query->whereHas('centre.assignedUsers', fn (Builder $assigned): Builder => $assigned->whereKey(auth()->id())),
+                )->required()->searchable()->preload(),
                 TextInput::make('name')->required()->maxLength(255),
                 TextInput::make('slug')->required()->maxLength(255)->unique(
                     ignoreRecord: true,

@@ -278,6 +278,10 @@ class PricingServiceTest extends TestCase
         $customer->assignRole('customer');
         $managerWithoutAccess = User::factory()->create();
         $managerWithoutAccess->assignRole('manager');
+        $otherStaffWithPermission = User::factory()->create();
+        $otherStaffWithPermission->assignRole('leisure-assistant');
+        $otherStaffWithPermission->givePermissionTo('pricing.manage');
+        $otherStaffWithPermission->assignedCentres()->attach($resource->facility->centre);
 
         $withoutPermission = $this->quote($resource, context: new PricingContext(
             override: new PricingOverride($customer, 1000, 'Reason', CarbonImmutable::parse('2026-06-01 09:30:00', config('app.timezone'))),
@@ -285,9 +289,13 @@ class PricingServiceTest extends TestCase
         $withoutAccess = $this->quote($resource, context: new PricingContext(
             override: new PricingOverride($managerWithoutAccess, 1000, 'Reason', CarbonImmutable::parse('2026-06-01 09:30:00', config('app.timezone'))),
         ));
+        $withoutManagerRole = $this->quote($resource, context: new PricingContext(
+            override: new PricingOverride($otherStaffWithPermission, 1000, 'Reason', CarbonImmutable::parse('2026-06-01 09:30:00', config('app.timezone'))),
+        ));
 
         $this->assertSame(PricingFailureReason::UnauthorizedOverride, $withoutPermission->failure->reason);
         $this->assertSame(PricingFailureReason::UnauthorizedOverride, $withoutAccess->failure->reason);
+        $this->assertSame(PricingFailureReason::UnauthorizedOverride, $withoutManagerRole->failure->reason);
         $this->assertDatabaseEmpty('activity_log');
     }
 

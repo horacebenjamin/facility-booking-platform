@@ -9,18 +9,18 @@ class ResourceRatePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('pricing.manage');
+        return $user->hasRole('manager') && $user->can('pricing.manage');
     }
 
     public function view(User $user, ResourceRate $resourceRate): bool
     {
-        return $user->can('pricing.manage')
+        return $user->hasRole('manager') && $user->can('pricing.manage')
             && $user->isAssignedToCentre($resourceRate->resource->facility->centre);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('pricing.manage') && $user->assignedCentres()->exists();
+        return $user->hasRole('manager') && $user->can('pricing.manage') && $user->assignedCentres()->exists();
     }
 
     public function update(User $user, ResourceRate $resourceRate): bool
