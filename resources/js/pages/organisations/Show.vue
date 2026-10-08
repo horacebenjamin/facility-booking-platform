@@ -16,6 +16,7 @@ import { index as availabilityIndex } from '@/routes/availability';
 import { index as bookingIndex } from '@/routes/bookings';
 import { index as invoiceIndex } from '@/routes/invoices';
 import { index as organisationIndex } from '@/routes/organisations';
+import { statement as organisationStatement } from '@/routes/organisations';
 import {
     destroy as removeMember,
     store as addMember,
@@ -33,7 +34,21 @@ const props = defineProps<{
     roles: OrganisationRoleOption[];
 }>();
 
-const page = usePage<{ flash?: { success?: string } }>();
+const page = usePage<{
+    flash?: { success?: string };
+    errors?: Record<string, string>;
+    old?: Record<string, unknown>;
+}>();
+
+function statementValue(field: 'from' | 'to'): string {
+    const value = page.props.old?.[field];
+
+    return typeof value === 'string' ? value : '';
+}
+
+function statementError(field: 'from' | 'to'): string | undefined {
+    return page.props.errors?.[field];
+}
 
 function canChange(member: OrganisationMember): boolean {
     return props.organisation.role === 'owner' || member.role !== 'owner';
@@ -95,6 +110,85 @@ function memberErrors(errors: Record<string, string>): string | undefined {
                     class="underline"
                     >View organisation invoices</Link
                 >
+                <form
+                    v-if="organisation.can_view_finance"
+                    method="get"
+                    :action="organisationStatement.url(organisation.id)"
+                    class="w-full space-y-3 rounded-lg border bg-muted/20 p-4"
+                >
+                    <div>
+                        <h3 class="font-medium">
+                            Download an organisation statement
+                        </h3>
+                        <p class="text-sm text-muted-foreground">
+                            Include invoices and payments for a selected period.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-start gap-3">
+                        <label
+                            class="grid gap-1 text-sm"
+                            for="organisation-statement-from"
+                        >
+                            <span class="font-medium">Statement from</span>
+                            <input
+                                id="organisation-statement-from"
+                                type="date"
+                                name="from"
+                                :value="statementValue('from')"
+                                :aria-invalid="
+                                    statementError('from') ? 'true' : undefined
+                                "
+                                :aria-describedby="
+                                    statementError('from')
+                                        ? 'organisation-statement-from-error'
+                                        : undefined
+                                "
+                                class="rounded border bg-background p-2"
+                            />
+                            <span
+                                v-if="statementError('from')"
+                                id="organisation-statement-from-error"
+                                class="text-sm text-destructive"
+                            >
+                                {{ statementError('from') }}
+                            </span>
+                        </label>
+                        <label
+                            class="grid gap-1 text-sm"
+                            for="organisation-statement-to"
+                        >
+                            <span class="font-medium">Statement to</span>
+                            <input
+                                id="organisation-statement-to"
+                                type="date"
+                                name="to"
+                                :value="statementValue('to')"
+                                :aria-invalid="
+                                    statementError('to') ? 'true' : undefined
+                                "
+                                :aria-describedby="
+                                    statementError('to')
+                                        ? 'organisation-statement-to-error'
+                                        : undefined
+                                "
+                                class="rounded border bg-background p-2"
+                            />
+                            <span
+                                v-if="statementError('to')"
+                                id="organisation-statement-to-error"
+                                class="text-sm text-destructive"
+                            >
+                                {{ statementError('to') }}
+                            </span>
+                        </label>
+                        <button
+                            type="submit"
+                            class="rounded-md border bg-background px-3 py-2 text-sm font-medium shadow-sm transition hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:mt-6"
+                        >
+                            Download statement PDF
+                        </button>
+                    </div>
+                </form>
             </CardContent>
         </Card>
 

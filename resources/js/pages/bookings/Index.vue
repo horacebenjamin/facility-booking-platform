@@ -84,7 +84,13 @@ const page = usePage<{ bookingTimezone: string }>();
                             }}</Badge>
                         </div>
                         <p class="text-sm">
-                            {{ formatBookingDateTime(booking.starts_at, page.props.bookingTimezone) }} ·
+                            {{
+                                formatBookingDateTime(
+                                    booking.starts_at,
+                                    page.props.bookingTimezone,
+                                )
+                            }}
+                            ·
                             {{ booking.financial_status_label }}
                         </p>
                         <p

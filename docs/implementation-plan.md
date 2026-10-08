@@ -2142,9 +2142,8 @@ Where justified:
 
 Select an actively maintained Laravel-compatible PDF solution at implementation time.
 
-Use private filesystem storage.
-
-Production later maps to S3.
+Generate authenticated PDFs on demand without persistent document storage.
+If storage is needed later, use a private filesystem disk (S3 in production).
 
 Support authorised downloads.
 
@@ -2179,6 +2178,17 @@ Customers can securely retrieve professional booking and financial documents.
 ## Definition of Done
 
 Manual Word/PDF document generation is no longer required for core records.
+
+## M22 implementation
+
+Implemented invoice, successful payment receipt, confirmed booking, personal
+statement and organisation statement PDFs. Downloads render privately on demand
+with Dompdf and use persisted historical amounts. Statements cover a validated
+London-local period; invoice balances include only invoice charges and their
+successful settlements, while direct booking card payments appear separately.
+Customer ownership, live organisation finance membership and management centre
+policies protect the routes. Credit/refund documents remain outside M22 because
+the current domain has no corresponding financial records.
 
 ---
 

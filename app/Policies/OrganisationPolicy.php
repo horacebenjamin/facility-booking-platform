@@ -18,6 +18,13 @@ class OrganisationPolicy
         return $user->hasRole('customer') && $user->organisationMembership($organisation) !== null;
     }
 
+    public function viewFinance(User $user, Organisation $organisation): bool
+    {
+        return $user->hasRole('customer')
+            && $user->can('bookings.view')
+            && $user->organisationMembership($organisation)?->role->canManageFinance() === true;
+    }
+
     public function create(User $user): bool
     {
         return $user->hasRole('customer');

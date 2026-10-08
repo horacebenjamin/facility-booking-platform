@@ -242,11 +242,117 @@ showForm.head = (args: { organisation: number | { id: number } } | [organisation
 
 show.form = showForm
 
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::statement
+* @see app/Http/Controllers/CustomerDocumentController.php:56
+* @route '/organisations/{organisation}/statement.pdf'
+*/
+export const statement = (args: { organisation: number | { id: number } } | [organisation: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: statement.url(args, options),
+    method: 'get',
+})
+
+statement.definition = {
+    methods: ["get","head"],
+    url: '/organisations/{organisation}/statement.pdf',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::statement
+* @see app/Http/Controllers/CustomerDocumentController.php:56
+* @route '/organisations/{organisation}/statement.pdf'
+*/
+statement.url = (args: { organisation: number | { id: number } } | [organisation: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { organisation: args }
+    }
+
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { organisation: args.id }
+    }
+
+    if (Array.isArray(args)) {
+        args = {
+            organisation: args[0],
+        }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+        organisation: typeof args.organisation === 'object'
+        ? args.organisation.id
+        : args.organisation,
+    }
+
+    return statement.definition.url
+            .replace('{organisation}', parsedArgs.organisation.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::statement
+* @see app/Http/Controllers/CustomerDocumentController.php:56
+* @route '/organisations/{organisation}/statement.pdf'
+*/
+statement.get = (args: { organisation: number | { id: number } } | [organisation: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: statement.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::statement
+* @see app/Http/Controllers/CustomerDocumentController.php:56
+* @route '/organisations/{organisation}/statement.pdf'
+*/
+statement.head = (args: { organisation: number | { id: number } } | [organisation: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: statement.url(args, options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::statement
+* @see app/Http/Controllers/CustomerDocumentController.php:56
+* @route '/organisations/{organisation}/statement.pdf'
+*/
+const statementForm = (args: { organisation: number | { id: number } } | [organisation: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: statement.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::statement
+* @see app/Http/Controllers/CustomerDocumentController.php:56
+* @route '/organisations/{organisation}/statement.pdf'
+*/
+statementForm.get = (args: { organisation: number | { id: number } } | [organisation: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: statement.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::statement
+* @see app/Http/Controllers/CustomerDocumentController.php:56
+* @route '/organisations/{organisation}/statement.pdf'
+*/
+statementForm.head = (args: { organisation: number | { id: number } } | [organisation: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: statement.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+statement.form = statementForm
+
 const organisations = {
     index: Object.assign(index, index),
     store: Object.assign(store, store),
     show: Object.assign(show, show),
     memberships: Object.assign(memberships, memberships),
+    statement: Object.assign(statement, statement),
 }
 
 export default organisations

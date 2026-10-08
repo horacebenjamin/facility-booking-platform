@@ -17,6 +17,8 @@ import {
 } from '@/routes/bookings';
 import { show as showInvoice } from '@/routes/invoices';
 import { show as showPayment } from '@/routes/bookings/payment';
+import { confirmation } from '@/routes/bookings';
+import { pdf as receiptPdf } from '@/routes/receipts';
 import {
     bookingLocalInput,
     formatBookingDateTime,
@@ -52,10 +54,12 @@ const props = defineProps<{
         ends_at: string;
         payment_due_at: string | null;
         invoice: { id: number; reference: string } | null;
+        receipts: { id: number; reference: string }[];
         is_recurring: boolean;
         occurrence_index: number | null;
         occurrence_count: number | null;
         can_pay: boolean;
+        can_download_confirmation: boolean;
         owner_type: 'individual' | 'organisation';
         owner_name: string;
         booked_by_name: string;
@@ -135,12 +139,24 @@ function localInput(value: string): string {
                         <div>
                             <p class="text-muted-foreground">Starts</p>
                             <p>
-                                {{ formatBookingDateTime(booking.starts_at, page.props.bookingTimezone) }}
+                                {{
+                                    formatBookingDateTime(
+                                        booking.starts_at,
+                                        page.props.bookingTimezone,
+                                    )
+                                }}
                             </p>
                         </div>
                         <div>
                             <p class="text-muted-foreground">Ends</p>
-                            <p>{{ formatBookingDateTime(booking.ends_at, page.props.bookingTimezone) }}</p>
+                            <p>
+                                {{
+                                    formatBookingDateTime(
+                                        booking.ends_at,
+                                        page.props.bookingTimezone,
+                                    )
+                                }}
+                            </p>
                         </div>
                         <div>
                             <p class="text-muted-foreground">Financial state</p>
@@ -167,7 +183,10 @@ function localInput(value: string): string {
                             </p>
                             <p>
                                 {{
-                                    formatBookingDateTime(booking.payment_due_at, page.props.bookingTimezone)
+                                    formatBookingDateTime(
+                                        booking.payment_due_at,
+                                        page.props.bookingTimezone,
+                                    )
                                 }}
                             </p>
                         </div>
@@ -180,7 +199,7 @@ function localInput(value: string): string {
                         <div v-if="booking.invoice" class="sm:col-span-2">
                             <Link
                                 :href="showInvoice(booking.invoice.id)"
-                                class="underline"
+                                class="font-medium break-words underline"
                                 >View invoice
                                 {{ booking.invoice.reference }}</Link
                             >
@@ -209,7 +228,10 @@ function localInput(value: string): string {
                                 <span
                                     >{{ occurrence.occurrence_index }} ·
                                     {{
-                                        formatBookingDateTime(occurrence.starts_at, page.props.bookingTimezone)
+                                        formatBookingDateTime(
+                                            occurrence.starts_at,
+                                            page.props.bookingTimezone,
+                                        )
                                     }}</span
                                 >
                                 <span class="text-muted-foreground">{{
@@ -249,7 +271,12 @@ function localInput(value: string): string {
                                 <time
                                     class="text-xs text-muted-foreground"
                                     :datetime="entry.occurred_at"
-                                    >{{ formatBookingDateTime(entry.occurred_at, page.props.bookingTimezone) }}</time
+                                    >{{
+                                        formatBookingDateTime(
+                                            entry.occurred_at,
+                                            page.props.bookingTimezone,
+                                        )
+                                    }}</time
                                 >
                             </li>
                         </ol>
@@ -266,6 +293,27 @@ function localInput(value: string): string {
                         ><CardTitle>Available actions</CardTitle></CardHeader
                     >
                     <CardContent class="space-y-4">
+                        <Button
+                            v-if="booking.can_download_confirmation"
+                            as-child
+                            variant="outline"
+                            class="w-full justify-start"
+                        >
+                            <a :href="confirmation.url(booking.id)">
+                                Download booking confirmation
+                            </a>
+                        </Button>
+                        <Button
+                            v-for="receipt in booking.receipts"
+                            :key="receipt.id"
+                            as-child
+                            variant="ghost"
+                            class="w-full justify-start"
+                        >
+                            <a :href="receiptPdf.url(receipt.id)">
+                                Download receipt {{ receipt.reference }}
+                            </a>
+                        </Button>
                         <Button v-if="booking.can_pay" as-child class="w-full">
                             <Link :href="showPayment(booking.id)"
                                 >Make payment</Link

@@ -62,11 +62,25 @@ function formatAmount() {
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Starts</dt>
-                        <dd>{{ formatBookingDateTime(booking.starts_at, page.props.bookingTimezone) }}</dd>
+                        <dd>
+                            {{
+                                formatBookingDateTime(
+                                    booking.starts_at,
+                                    page.props.bookingTimezone,
+                                )
+                            }}
+                        </dd>
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Ends</dt>
-                        <dd>{{ formatBookingDateTime(booking.ends_at, page.props.bookingTimezone) }}</dd>
+                        <dd>
+                            {{
+                                formatBookingDateTime(
+                                    booking.ends_at,
+                                    page.props.bookingTimezone,
+                                )
+                            }}
+                        </dd>
                     </div>
                     <div>
                         <dt class="text-muted-foreground">Booking total</dt>
@@ -77,7 +91,12 @@ function formatAmount() {
                     <div v-if="booking.payment_due_at">
                         <dt class="text-muted-foreground">Payment deadline</dt>
                         <dd>
-                            {{ formatBookingDateTime(booking.payment_due_at, page.props.bookingTimezone) }}
+                            {{
+                                formatBookingDateTime(
+                                    booking.payment_due_at,
+                                    page.props.bookingTimezone,
+                                )
+                            }}
                         </dd>
                     </div>
                 </dl>

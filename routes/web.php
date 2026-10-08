@@ -5,8 +5,10 @@ use App\Http\Controllers\BookingPaymentController;
 use App\Http\Controllers\BookingReviewController;
 use App\Http\Controllers\CheckAvailabilityController;
 use App\Http\Controllers\CustomerBookingController;
+use App\Http\Controllers\CustomerDocumentController;
 use App\Http\Controllers\CustomerInvoiceController;
 use App\Http\Controllers\CustomerNotificationController;
+use App\Http\Controllers\ManagementDocumentController;
 use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\OrganisationMembershipController;
 use App\Http\Controllers\PreviewRecurringBookingRequestController;
@@ -39,6 +41,11 @@ Route::middleware(['auth', 'verified', EnsureCustomerRole::class])->group(functi
     Route::patch('notifications/{notification}/read', [CustomerNotificationController::class, 'read'])->name('notifications.read');
     Route::get('invoices', [CustomerInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/{invoice}', [CustomerInvoiceController::class, 'show'])->name('invoices.show');
+    Route::get('invoices/{invoice}/pdf', [CustomerDocumentController::class, 'invoice'])->name('invoices.pdf');
+    Route::get('receipts/{payment}/pdf', [CustomerDocumentController::class, 'receipt'])->name('receipts.pdf');
+    Route::get('bookings/{booking}/confirmation.pdf', [CustomerDocumentController::class, 'confirmation'])->name('bookings.confirmation');
+    Route::get('statements/personal.pdf', [CustomerDocumentController::class, 'personalStatement'])->name('statements.personal');
+    Route::get('organisations/{organisation}/statement.pdf', [CustomerDocumentController::class, 'organisationStatement'])->name('organisations.statement');
     Route::get('bookings', [CustomerBookingController::class, 'index'])->name('bookings.index');
     Route::get('bookings/{booking}/payment', [BookingPaymentController::class, 'show'])->name('bookings.payment.show');
     Route::post('bookings/{booking}/payment', [BookingPaymentController::class, 'store'])
@@ -50,6 +57,12 @@ Route::middleware(['auth', 'verified', EnsureCustomerRole::class])->group(functi
     Route::post('bookings', StoreBookingRequestController::class)->name('bookings.store');
     Route::post('bookings/recurring/preview', PreviewRecurringBookingRequestController::class)->name('bookings.recurring.preview');
     Route::post('bookings/recurring', StoreRecurringBookingRequestController::class)->name('bookings.recurring.store');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('management/documents')->name('management.documents.')->group(function () {
+    Route::get('invoices/{invoice}.pdf', [ManagementDocumentController::class, 'invoice'])->name('invoices');
+    Route::get('receipts/{payment}.pdf', [ManagementDocumentController::class, 'receipt'])->name('receipts');
+    Route::get('bookings/{booking}.pdf', [ManagementDocumentController::class, 'confirmation'])->name('bookings');
 });
 
 require __DIR__.'/settings.php';

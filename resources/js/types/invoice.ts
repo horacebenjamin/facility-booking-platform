@@ -14,6 +14,7 @@ export interface InvoiceSummary {
 }
 
 export interface InvoiceDetail extends InvoiceSummary {
+    receipts: { id: number; reference: string }[];
     lines: {
         id: number;
         description: string;

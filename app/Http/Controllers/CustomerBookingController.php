@@ -63,6 +63,7 @@ class CustomerBookingController extends Controller
             'series.bookings',
             'series.bookings.organisation',
             'invoiceLines.invoice.organisation',
+            'payments',
             'activities',
         ]);
 

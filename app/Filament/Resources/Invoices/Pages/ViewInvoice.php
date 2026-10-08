@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Invoices\Pages;
 
 use App\Actions\RecordManualInvoicePayment;
 use App\Enums\InvoiceStatus;
+use App\Enums\PaymentStatus;
 use App\Exceptions\InvoiceUnavailable;
 use App\Filament\Resources\Invoices\InvoiceResource;
 use App\Models\Invoice;
@@ -21,6 +22,16 @@ class ViewInvoice extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('downloadInvoice')
+                ->label('Download invoice PDF')
+                ->visible(fn (): bool => auth()->user()?->can('view', $this->invoice()) === true)
+                ->url(fn (): string => route('management.documents.invoices', $this->invoice()))
+                ->openUrlInNewTab(),
+            Action::make('downloadReceipt')
+                ->label('Download payment receipt')
+                ->visible(fn (): bool => auth()->user()?->can('payments.view') === true && $this->invoice()->payments()->where('status', PaymentStatus::Succeeded)->exists())
+                ->url(fn (): string => route('management.documents.receipts', $this->invoice()->payments()->where('status', PaymentStatus::Succeeded)->latest('id')->firstOrFail()))
+                ->openUrlInNewTab(),
             Action::make('recordPayment')->label('Record manual settlement')
                 ->visible(fn (): bool => $this->invoice()->status === InvoiceStatus::Issued && auth()->user()?->can('recordPayment', $this->invoice()) === true)
                 ->modalDescription('Record an externally received payment for the full outstanding invoice total. This does not collect a card payment.')

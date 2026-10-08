@@ -22,11 +22,21 @@ export function bookingLocalInput(value: string, timeZone: string): string {
     return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
 }
 
-export function bookingWallClockMinutes(date: string, startsAt: string, endsAt: string): number {
+export function bookingWallClockMinutes(
+    date: string,
+    startsAt: string,
+    endsAt: string,
+): number {
     const [year, month, day] = date.split('-').map(Number);
     const [startHour, startMinute] = startsAt.split(':').map(Number);
     const [endHour, endMinute] = endsAt.split(':').map(Number);
-    const startsAtWallClock = Date.UTC(year, month - 1, day, startHour, startMinute);
+    const startsAtWallClock = Date.UTC(
+        year,
+        month - 1,
+        day,
+        startHour,
+        startMinute,
+    );
     const endsAtWallClock = Date.UTC(year, month - 1, day, endHour, endMinute);
 
     return (endsAtWallClock - startsAtWallClock) / 60000;

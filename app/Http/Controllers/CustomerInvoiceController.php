@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\OrganisationRole;
+use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\InvoiceLine;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ class CustomerInvoiceController extends Controller
     public function show(Request $request, Invoice $invoice): Response
     {
         abort_unless($request->user()?->can('viewCustomer', $invoice), 404);
-        $invoice->load(['customer', 'organisation', 'lines.booking']);
+        $invoice->load(['customer', 'organisation', 'lines.booking', 'payments']);
 
         return Inertia::render('invoices/Show', [
             'invoice' => [...$this->summary($invoice), 'lines' => $invoice->lines->map(fn (InvoiceLine $line): array => [
@@ -47,7 +48,10 @@ class CustomerInvoiceController extends Controller
                 'description' => $line->description,
                 'amount_minor' => $line->amount_minor,
                 'booking_reference' => $line->booking->reference,
-            ])],
+            ]), 'receipts' => $invoice->payments->where('status', PaymentStatus::Succeeded)->map(fn ($payment): array => [
+                'id' => $payment->id,
+                'reference' => $payment->reference,
+            ])->values()],
         ]);
     }
 

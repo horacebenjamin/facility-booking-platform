@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { index } from '@/routes/invoices';
+import { pdf as invoicePdf } from '@/routes/invoices';
+import { pdf as receiptPdf } from '@/routes/receipts';
 import type { InvoiceDetail } from '@/types/invoice';
 
 defineProps<{ invoice: InvoiceDetail }>();
@@ -18,20 +22,32 @@ function money(amount: number, currency: string): string {
     <div class="w-full flex-1 p-4 md:p-6">
         <Head :title="`Invoice ${invoice.reference}`" />
         <Card class="mx-auto max-w-3xl">
-            <CardContent class="space-y-4 py-6">
-                <Link :href="index()" class="text-sm underline"
+            <CardContent class="space-y-6 py-6">
+                <Link
+                    :href="index()"
+                    class="text-sm text-muted-foreground underline"
                     >My invoices</Link
                 >
-                <h1 class="text-2xl font-semibold">
-                    Invoice {{ invoice.reference }}
-                </h1>
-                <p>
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <h1 class="text-2xl font-semibold break-words">
+                            Invoice {{ invoice.reference }}
+                        </h1>
+                        <p class="mt-2 text-sm text-muted-foreground">
+                            Issued {{ invoice.issue_date }} · Due
+                            {{ invoice.due_date }}
+                        </p>
+                    </div>
+                    <Button as-child variant="outline">
+                        <a :href="invoicePdf.url(invoice.id)"
+                            >Download invoice PDF</a
+                        >
+                    </Button>
+                </div>
+                <Badge variant="secondary">
                     {{ invoice.status_label
                     }}{{ invoice.overdue ? ' · Overdue' : '' }}
-                </p>
-                <p class="text-sm">
-                    Issued {{ invoice.issue_date }} · Due {{ invoice.due_date }}
-                </p>
+                </Badge>
                 <p
                     v-if="invoice.owner_type === 'organisation'"
                     class="text-sm text-muted-foreground"
@@ -61,13 +77,46 @@ function money(amount: number, currency: string): string {
                         </p>
                     </li>
                 </ul>
-                <p class="font-semibold">
-                    Total {{ money(invoice.total_minor, invoice.currency) }}
-                </p>
-                <p>
-                    Outstanding
-                    {{ money(invoice.outstanding_minor, invoice.currency) }}
-                </p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-lg border bg-muted/20 p-4">
+                        <p class="text-sm text-muted-foreground">
+                            Invoice total
+                        </p>
+                        <p class="mt-1 text-lg font-semibold">
+                            {{ money(invoice.total_minor, invoice.currency) }}
+                        </p>
+                    </div>
+                    <div class="rounded-lg border bg-muted/20 p-4">
+                        <p class="text-sm text-muted-foreground">Outstanding</p>
+                        <p class="mt-1 text-lg font-semibold">
+                            {{
+                                money(
+                                    invoice.outstanding_minor,
+                                    invoice.currency,
+                                )
+                            }}
+                        </p>
+                    </div>
+                </div>
+                <div
+                    v-if="invoice.receipts.length"
+                    class="space-y-2 border-t pt-4"
+                >
+                    <p class="font-medium">Payment receipts</p>
+                    <div class="grid gap-2 sm:flex sm:flex-wrap">
+                        <Button
+                            v-for="receipt in invoice.receipts"
+                            :key="receipt.id"
+                            as-child
+                            variant="ghost"
+                            class="justify-start px-0 sm:px-3"
+                        >
+                            <a :href="receiptPdf.url(receipt.id)">
+                                Download receipt {{ receipt.reference }}
+                            </a>
+                        </Button>
+                    </div>
+                </div>
             </CardContent>
         </Card>
     </div>

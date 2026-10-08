@@ -2,6 +2,111 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
 import payment from './payment'
 import recurring from './recurring'
 /**
+* @see \App\Http\Controllers\CustomerDocumentController::confirmation
+* @see app/Http/Controllers/CustomerDocumentController.php:39
+* @route '/bookings/{booking}/confirmation.pdf'
+*/
+export const confirmation = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: confirmation.url(args, options),
+    method: 'get',
+})
+
+confirmation.definition = {
+    methods: ["get","head"],
+    url: '/bookings/{booking}/confirmation.pdf',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::confirmation
+* @see app/Http/Controllers/CustomerDocumentController.php:39
+* @route '/bookings/{booking}/confirmation.pdf'
+*/
+confirmation.url = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { booking: args }
+    }
+
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { booking: args.id }
+    }
+
+    if (Array.isArray(args)) {
+        args = {
+            booking: args[0],
+        }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+        booking: typeof args.booking === 'object'
+        ? args.booking.id
+        : args.booking,
+    }
+
+    return confirmation.definition.url
+            .replace('{booking}', parsedArgs.booking.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::confirmation
+* @see app/Http/Controllers/CustomerDocumentController.php:39
+* @route '/bookings/{booking}/confirmation.pdf'
+*/
+confirmation.get = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: confirmation.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::confirmation
+* @see app/Http/Controllers/CustomerDocumentController.php:39
+* @route '/bookings/{booking}/confirmation.pdf'
+*/
+confirmation.head = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: confirmation.url(args, options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::confirmation
+* @see app/Http/Controllers/CustomerDocumentController.php:39
+* @route '/bookings/{booking}/confirmation.pdf'
+*/
+const confirmationForm = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: confirmation.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::confirmation
+* @see app/Http/Controllers/CustomerDocumentController.php:39
+* @route '/bookings/{booking}/confirmation.pdf'
+*/
+confirmationForm.get = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: confirmation.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\CustomerDocumentController::confirmation
+* @see app/Http/Controllers/CustomerDocumentController.php:39
+* @route '/bookings/{booking}/confirmation.pdf'
+*/
+confirmationForm.head = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: confirmation.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+confirmation.form = confirmationForm
+
+/**
 * @see \App\Http\Controllers\CustomerBookingController::index
 * @see app/Http/Controllers/CustomerBookingController.php:23
 * @route '/bookings'
@@ -270,7 +375,7 @@ show.form = showForm
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::cancel
-* @see app/Http/Controllers/CustomerBookingController.php:74
+* @see app/Http/Controllers/CustomerBookingController.php:75
 * @route '/bookings/{booking}/cancel'
 */
 export const cancel = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -285,7 +390,7 @@ cancel.definition = {
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::cancel
-* @see app/Http/Controllers/CustomerBookingController.php:74
+* @see app/Http/Controllers/CustomerBookingController.php:75
 * @route '/bookings/{booking}/cancel'
 */
 cancel.url = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -318,7 +423,7 @@ cancel.url = (args: { booking: number | { id: number } } | [booking: number | { 
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::cancel
-* @see app/Http/Controllers/CustomerBookingController.php:74
+* @see app/Http/Controllers/CustomerBookingController.php:75
 * @route '/bookings/{booking}/cancel'
 */
 cancel.post = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -328,7 +433,7 @@ cancel.post = (args: { booking: number | { id: number } } | [booking: number | {
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::cancel
-* @see app/Http/Controllers/CustomerBookingController.php:74
+* @see app/Http/Controllers/CustomerBookingController.php:75
 * @route '/bookings/{booking}/cancel'
 */
 const cancelForm = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -338,7 +443,7 @@ const cancelForm = (args: { booking: number | { id: number } } | [booking: numbe
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::cancel
-* @see app/Http/Controllers/CustomerBookingController.php:74
+* @see app/Http/Controllers/CustomerBookingController.php:75
 * @route '/bookings/{booking}/cancel'
 */
 cancelForm.post = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -350,7 +455,7 @@ cancel.form = cancelForm
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::amend
-* @see app/Http/Controllers/CustomerBookingController.php:89
+* @see app/Http/Controllers/CustomerBookingController.php:90
 * @route '/bookings/{booking}'
 */
 export const amend = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -365,7 +470,7 @@ amend.definition = {
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::amend
-* @see app/Http/Controllers/CustomerBookingController.php:89
+* @see app/Http/Controllers/CustomerBookingController.php:90
 * @route '/bookings/{booking}'
 */
 amend.url = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -398,7 +503,7 @@ amend.url = (args: { booking: number | { id: number } } | [booking: number | { i
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::amend
-* @see app/Http/Controllers/CustomerBookingController.php:89
+* @see app/Http/Controllers/CustomerBookingController.php:90
 * @route '/bookings/{booking}'
 */
 amend.patch = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -408,7 +513,7 @@ amend.patch = (args: { booking: number | { id: number } } | [booking: number | {
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::amend
-* @see app/Http/Controllers/CustomerBookingController.php:89
+* @see app/Http/Controllers/CustomerBookingController.php:90
 * @route '/bookings/{booking}'
 */
 const amendForm = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -423,7 +528,7 @@ const amendForm = (args: { booking: number | { id: number } } | [booking: number
 
 /**
 * @see \App\Http\Controllers\CustomerBookingController::amend
-* @see app/Http/Controllers/CustomerBookingController.php:89
+* @see app/Http/Controllers/CustomerBookingController.php:90
 * @route '/bookings/{booking}'
 */
 amendForm.patch = (args: { booking: number | { id: number } } | [booking: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -495,6 +600,7 @@ storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => (
 store.form = storeForm
 
 const bookings = {
+    confirmation: Object.assign(confirmation, confirmation),
     index: Object.assign(index, index),
     payment: Object.assign(payment, payment),
     review: Object.assign(review, review),

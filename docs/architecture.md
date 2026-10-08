@@ -1314,9 +1314,20 @@ These should be private by default.
 
 ### 23.4 PDF Library
 
-The exact PDF rendering library is intentionally deferred until document
-implementation, when current maintenance, Laravel compatibility, output
-quality and security can be evaluated.
+M22 uses `barryvdh/laravel-dompdf` 3.1 with Dompdf 3.1. PDFs are rendered
+on demand from Blade views and returned directly to authorised callers;
+no public or permanent document copy is written. Remote resources, embedded
+PHP and JavaScript are disabled in the renderer.
+
+Document builders use persisted invoice lines and totals, successful payment
+records, and booking price snapshots. They never reprice historical bookings.
+Invoice statements show invoice charges and successful invoice settlements
+with opening and closing invoice balances. Direct booking card payments are
+listed separately because they do not belong to the invoice balance. Personal
+and organisation ownership are queried separately. London-local calendar
+periods are converted to UTC instants for payment queries; user-facing times
+use `config('booking.local_timezone')`. Customer policies, live organisation
+finance membership, and staff invoice/booking policies enforce downloads.
 
 ------------------------------------------------------------------------
 
@@ -2398,16 +2409,15 @@ requirement or explicit scope change:
 The following are intentionally deferred:
 
 1.  Exact AWS compute choice.
-2.  Exact PDF rendering package.
-3.  Exact physical hold-table representation.
-4.  Exact table/column/index/foreign-key layout.
-5.  Exact deletion/soft-deletion strategy per entity.
-6.  Exact static-analysis/lint toolchain.
-7.  Exact production email provider, with SES a candidate.
-8.  Exact production AI provider/model.
-9.  Exact cache candidates after measurement.
-10. Detailed backup frequency/retention/restore policy.
-11. Whether staff-centre assignments require effective dates.
+2.  Exact physical hold-table representation.
+3.  Exact table/column/index/foreign-key layout.
+4.  Exact deletion/soft-deletion strategy per entity.
+5.  Exact static-analysis/lint toolchain.
+6.  Exact production email provider, with SES a candidate.
+7.  Exact production AI provider/model.
+8.  Exact cache candidates after measurement.
+9.  Detailed backup frequency/retention/restore policy.
+10. Whether staff-centre assignments require effective dates.
 12. Whether WebSockets/Reverb are ever justified by measured operational
     need.
 

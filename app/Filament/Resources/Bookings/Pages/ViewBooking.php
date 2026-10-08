@@ -7,6 +7,7 @@ use App\Actions\RejectBooking;
 use App\Actions\SetCustomerInvoiceTerms;
 use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Exceptions\BookingLifecycleTransitionUnavailable;
 use App\Exceptions\InvoiceUnavailable;
 use App\Filament\Resources\Bookings\BookingResource;
@@ -29,6 +30,16 @@ class ViewBooking extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('downloadConfirmation')
+                ->label('Download confirmation PDF')
+                ->visible(fn (): bool => $this->booking()->status === BookingStatus::Confirmed && $this->actor()->can('view', $this->booking()))
+                ->url(fn (): string => route('management.documents.bookings', $this->booking()))
+                ->openUrlInNewTab(),
+            Action::make('downloadReceipt')
+                ->label('Download payment receipt')
+                ->visible(fn (): bool => $this->actor()->can('payments.view') && $this->booking()->payments()->where('status', PaymentStatus::Succeeded)->exists())
+                ->url(fn (): string => route('management.documents.receipts', $this->booking()->payments()->where('status', PaymentStatus::Succeeded)->latest('id')->firstOrFail()))
+                ->openUrlInNewTab(),
             Action::make('approve')
                 ->label('Approve')
                 ->color('success')

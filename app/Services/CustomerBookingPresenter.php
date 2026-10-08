@@ -6,6 +6,7 @@ use App\Enums\AttendanceState;
 use App\Enums\BillingMethod;
 use App\Enums\BookingStatus;
 use App\Enums\FinancialStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -56,6 +57,7 @@ class CustomerBookingPresenter
                 && $booking->billing_method === BillingMethod::Card
                 && $booking->payment_due_at?->isFuture() === true
                 && $customer->can('pay', $booking),
+            'can_download_confirmation' => $booking->status === BookingStatus::Confirmed,
             'can_cancel' => $canCancel,
             'cancellation_unavailable_reason' => $canCancel
                 ? null
@@ -79,6 +81,12 @@ class CustomerBookingPresenter
         $summary['financial_message'] = $this->financialMessage($booking, $summary['status']);
         $summary['history'] = $this->history($booking);
         $summary['recurring'] = $this->recurring($booking, $customer);
+        $summary['receipts'] = $customer->can('pay', $booking)
+            ? $booking->payments->where('status', PaymentStatus::Succeeded)->map(fn ($payment): array => [
+                'id' => $payment->id,
+                'reference' => $payment->reference,
+            ])->values()->all()
+            : [];
 
         return $summary;
     }
