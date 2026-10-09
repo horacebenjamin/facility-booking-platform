@@ -5,6 +5,7 @@ import BookingConfirmation from '@/components/BookingConfirmation.vue';
 import BookingFrequencyChoice from '@/components/BookingFrequencyChoice.vue';
 import BookingOwnerChoice from '@/components/BookingOwnerChoice.vue';
 import BookingSummary from '@/components/BookingSummary.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import RecurringBookingConfirmation from '@/components/RecurringBookingConfirmation.vue';
 import RecurringBookingReview from '@/components/RecurringBookingReview.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,6 +29,10 @@ import {
 } from '@/lib/booking';
 import { dashboard } from '@/routes';
 import { index as availabilityIndex } from '@/routes/availability';
+import {
+    index as bookingIndex,
+    review as reviewBooking,
+} from '@/routes/bookings';
 import type {
     BookingCustomer,
     BookingOrganisationContext,
@@ -37,6 +42,15 @@ import type {
     RecurrenceConstraints,
     RecurringBookingConfirmation as RecurringBookingConfirmationData,
 } from '@/types/booking';
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Find a facility', href: availabilityIndex() },
+            { title: 'Review booking', href: reviewBooking() },
+        ],
+    },
+});
 
 const props = defineProps<{
     selection: BookingReviewSelection;
@@ -106,18 +120,32 @@ async function submitBookingRequest(): Promise<void> {
 </script>
 
 <template>
-    <Head
-        :title="
-            confirmation || recurringConfirmation
-                ? 'Booking request received'
-                : 'Review booking'
-        "
-    />
+    <div class="w-full min-w-0 flex-1 p-4 md:p-6">
+        <Head
+            :title="
+                confirmation || recurringConfirmation
+                    ? 'Booking request received'
+                    : 'Review booking'
+            "
+        />
 
-    <main class="min-h-screen bg-muted/30 px-4 py-8 sm:px-6 sm:py-12">
-        <div class="mx-auto max-w-4xl space-y-8">
+        <div class="mx-auto max-w-4xl min-w-0 space-y-6">
+            <PageHeader
+                :title="
+                    confirmation || recurringConfirmation
+                        ? 'Request submitted'
+                        : bookingType === 'one_off'
+                          ? 'Review your booking'
+                          : 'Set up recurring bookings'
+                "
+                :description="
+                    confirmation || recurringConfirmation
+                        ? 'Your request still requires management review.'
+                        : 'Choose whether this is one booking or a weekly series, then review everything before sending it for management approval.'
+                "
+            />
             <nav aria-label="Booking progress">
-                <ol class="grid grid-cols-4 gap-2 text-xs sm:text-sm">
+                <ol class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                     <li class="rounded-md bg-muted px-2 py-2 text-center">
                         Details
                     </li>
@@ -175,32 +203,15 @@ async function submitBookingRequest(): Promise<void> {
                         </Link>
                     </Button>
                     <Button variant="outline" as-child>
+                        <Link :href="bookingIndex()">My bookings</Link>
+                    </Button>
+                    <Button variant="outline" as-child>
                         <Link :href="dashboard()">Go to dashboard</Link>
                     </Button>
                 </div>
             </template>
 
             <template v-else>
-                <header class="max-w-2xl space-y-2">
-                    <p class="text-sm font-medium text-muted-foreground">
-                        Booking request
-                    </p>
-                    <h1
-                        class="text-3xl font-semibold tracking-tight sm:text-4xl"
-                    >
-                        {{
-                            bookingType === 'one_off'
-                                ? 'Review your booking'
-                                : 'Set up recurring bookings'
-                        }}
-                    </h1>
-                    <p class="text-muted-foreground">
-                        Choose whether this is one booking or a weekly series,
-                        then review everything before sending it for management
-                        approval.
-                    </p>
-                </header>
-
                 <BookingOwnerChoice
                     v-if="bookingContexts.length > 0"
                     v-model="organisationId"
@@ -283,5 +294,5 @@ async function submitBookingRequest(): Promise<void> {
                 />
             </template>
         </div>
-    </main>
+    </div>
 </template>

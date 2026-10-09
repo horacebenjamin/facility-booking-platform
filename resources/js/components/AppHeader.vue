@@ -179,7 +179,7 @@ const mainNavItems = computed<NavItem[]>(() =>
                 </div>
 
                 <div class="ml-auto flex items-center space-x-2">
-                    <DropdownMenu>
+                    <DropdownMenu v-if="auth.user">
                         <DropdownMenuTrigger :as-child="true">
                             <Button
                                 variant="ghost"

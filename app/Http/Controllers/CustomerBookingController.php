@@ -42,10 +42,8 @@ class CustomerBookingController extends Controller
                 ->with(['customer', 'organisation', 'centre', 'facility', 'resource', 'series', 'invoiceLines.invoice.organisation'])
                 ->latest('starts_at')
                 ->latest('id')
-                ->limit(50)
-                ->get()
-                ->map(fn (Booking $booking): array => $presenter->summary($booking, $customer))
-                ->values(),
+                ->paginate(10)
+                ->through(fn (Booking $booking): array => $presenter->summary($booking, $customer)),
         ]);
     }
 

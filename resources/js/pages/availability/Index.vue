@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import AvailabilityResult from '@/components/AvailabilityResult.vue';
 import InputError from '@/components/InputError.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,7 +23,10 @@ import {
     canContinueToBooking,
 } from '@/lib/booking';
 import { bookingWallClockMinutes } from '@/lib/bookingDateTime';
-import { check as checkAvailability } from '@/routes/availability';
+import {
+    check as checkAvailability,
+    index as availabilityIndex,
+} from '@/routes/availability';
 import { review as reviewBooking } from '@/routes/bookings';
 import { quote as quotePricing } from '@/routes/pricing';
 import type {
@@ -35,6 +39,12 @@ import type {
     Resource,
 } from '@/types/availability';
 import type { BookingSelectionPayload } from '@/types/booking';
+
+defineOptions({
+    layout: {
+        breadcrumbs: [{ title: 'Find a facility', href: availabilityIndex() }],
+    },
+});
 
 const props = defineProps<{
     centres: Centre[];
@@ -595,515 +605,532 @@ watch(
 </script>
 
 <template>
-    <Head title="Check availability" />
-
-    <main class="min-h-screen bg-muted/30 px-4 py-8 sm:px-6 sm:py-12">
-        <div
-            class="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]"
-        >
-            <section class="space-y-8">
-                <header class="max-w-2xl space-y-2">
-                    <p class="text-sm font-medium text-muted-foreground">
-                        Venue booking
-                    </p>
-                    <h1
-                        class="text-3xl font-semibold tracking-tight sm:text-4xl"
-                    >
-                        Check availability
-                    </h1>
-                    <p class="text-muted-foreground">
-                        Choose a venue, resource and time to check current
-                        availability.
-                    </p>
-                </header>
-
-                <form class="space-y-6" @submit.prevent="submit" novalidate>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Venue</CardTitle>
-                            <CardDescription
-                                >Choose where you would like to
-                                book.</CardDescription
-                            >
-                        </CardHeader>
-                        <CardContent class="grid gap-5 sm:grid-cols-3">
-                            <div class="grid gap-2">
-                                <Label for="centre">Centre</Label>
-                                <select
-                                    id="centre"
-                                    v-model="selectedCentreId"
-                                    class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                    :aria-invalid="
-                                        Boolean(fieldErrors.centre_id)
-                                    "
-                                    aria-describedby="centre-error"
+    <div class="w-full min-w-0 flex-1 p-4 md:p-6">
+        <Head title="Check availability" />
+        <div class="mx-auto max-w-7xl min-w-0 space-y-6">
+            <PageHeader
+                title="Check availability"
+                description="Choose a venue, resource and time to check current availability."
+            />
+            <div
+                class="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]"
+            >
+                <section class="min-w-0 space-y-6">
+                    <form class="space-y-6" @submit.prevent="submit" novalidate>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Venue</CardTitle>
+                                <CardDescription
+                                    >Choose where you would like to
+                                    book.</CardDescription
                                 >
-                                    <option :value="null">
-                                        Choose a centre
-                                    </option>
-                                    <option
-                                        v-for="centre in centres"
-                                        :key="centre.id"
-                                        :value="centre.id"
+                            </CardHeader>
+                            <CardContent
+                                class="grid gap-5 lg:grid-cols-3 [&_select]:min-w-0 [&>div]:min-w-0"
+                            >
+                                <div class="grid gap-2">
+                                    <Label for="centre">Centre</Label>
+                                    <select
+                                        id="centre"
+                                        v-model="selectedCentreId"
+                                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                        :aria-invalid="
+                                            Boolean(fieldErrors.centre_id)
+                                        "
+                                        aria-describedby="centre-error"
                                     >
-                                        {{ centre.name }}
-                                    </option>
-                                </select>
-                                <InputError
-                                    id="centre-error"
-                                    :message="fieldErrors.centre_id"
-                                />
-                                <p
-                                    v-if="centres.length === 0"
-                                    class="text-sm text-muted-foreground"
-                                >
-                                    No venues are currently available.
-                                </p>
-                            </div>
-
-                            <div class="grid gap-2">
-                                <Label for="facility">Facility</Label>
-                                <select
-                                    id="facility"
-                                    v-model="selectedFacilityId"
-                                    :disabled="!selectedCentreId"
-                                    class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    :aria-invalid="
-                                        Boolean(fieldErrors.facility_id)
-                                    "
-                                    aria-describedby="facility-error"
-                                >
-                                    <option :value="null">
-                                        Choose a facility
-                                    </option>
-                                    <option
-                                        v-for="facility in facilitiesForCentre"
-                                        :key="facility.id"
-                                        :value="facility.id"
-                                    >
-                                        {{ facility.name }}
-                                    </option>
-                                </select>
-                                <InputError
-                                    id="facility-error"
-                                    :message="fieldErrors.facility_id"
-                                />
-                                <p
-                                    v-if="
-                                        selectedCentreId &&
-                                        facilitiesForCentre.length === 0
-                                    "
-                                    class="text-sm text-muted-foreground"
-                                >
-                                    No facilities are currently available at
-                                    this venue.
-                                </p>
-                            </div>
-
-                            <div class="grid gap-2">
-                                <Label for="resource">Resource</Label>
-                                <select
-                                    id="resource"
-                                    v-model="selectedResourceId"
-                                    :disabled="!selectedFacilityId"
-                                    class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    :aria-invalid="
-                                        Boolean(fieldErrors.resource_id)
-                                    "
-                                    aria-describedby="resource-error"
-                                >
-                                    <option :value="null">
-                                        Choose a resource
-                                    </option>
-                                    <option
-                                        v-for="resource in resourcesForFacility"
-                                        :key="resource.id"
-                                        :value="resource.id"
-                                    >
-                                        {{ resource.name }}
-                                    </option>
-                                </select>
-                                <InputError
-                                    id="resource-error"
-                                    :message="fieldErrors.resource_id"
-                                />
-                                <p
-                                    v-if="
-                                        selectedFacilityId &&
-                                        resourcesForFacility.length === 0
-                                    "
-                                    class="text-sm text-muted-foreground"
-                                >
-                                    No bookable resources are currently
-                                    available for this facility.
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Date and time</CardTitle>
-                            <CardDescription
-                                >Booking lengths vary by resource. Choose the
-                                time you need.</CardDescription
-                            >
-                        </CardHeader>
-                        <CardContent class="grid gap-5 sm:grid-cols-3">
-                            <div class="grid gap-2">
-                                <Label for="date">Date</Label>
-                                <Input
-                                    id="date"
-                                    v-model="selectedDate"
-                                    type="date"
-                                    :aria-invalid="Boolean(fieldErrors.date)"
-                                    aria-describedby="date-error"
-                                />
-                                <InputError
-                                    id="date-error"
-                                    :message="fieldErrors.date"
-                                />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label for="starts-at">Start time</Label>
-                                <Input
-                                    id="starts-at"
-                                    v-model="startsAt"
-                                    type="time"
-                                    :aria-invalid="
-                                        Boolean(fieldErrors.starts_at)
-                                    "
-                                    aria-describedby="starts-at-error"
-                                />
-                                <InputError
-                                    id="starts-at-error"
-                                    :message="fieldErrors.starts_at"
-                                />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label for="ends-at">End time</Label>
-                                <Input
-                                    id="ends-at"
-                                    v-model="endsAt"
-                                    type="time"
-                                    :aria-invalid="Boolean(fieldErrors.ends_at)"
-                                    aria-describedby="ends-at-error"
-                                />
-                                <InputError
-                                    id="ends-at-error"
-                                    :message="fieldErrors.ends_at"
-                                />
-                            </div>
-                        </CardContent>
-                        <CardContent
-                            v-if="duration"
-                            class="pt-0 text-sm text-muted-foreground"
-                            >Selected duration:
-                            <span class="font-medium text-foreground">{{
-                                duration
-                            }}</span></CardContent
-                        >
-                    </Card>
-
-                    <Card v-if="selectedCentreId">
-                        <CardHeader>
-                            <CardTitle
-                                >Equipment
-                                <span class="font-normal text-muted-foreground"
-                                    >(optional)</span
-                                ></CardTitle
-                            >
-                            <CardDescription
-                                >Add equipment to this selection if you need
-                                it.</CardDescription
-                            >
-                        </CardHeader>
-                        <CardContent>
-                            <p
-                                v-if="compatibleEquipment.length === 0"
-                                class="text-sm text-muted-foreground"
-                            >
-                                No optional equipment is available for this
-                                selection.
-                            </p>
-                            <div v-else class="space-y-3">
-                                <div
-                                    v-for="item in compatibleEquipment"
-                                    :key="item.id"
-                                    class="grid gap-3 rounded-lg border p-4 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center"
-                                >
-                                    <Label
-                                        :for="`equipment-${item.id}`"
-                                        class="leading-5"
-                                    >
-                                        <input
-                                            :id="`equipment-${item.id}`"
-                                            type="checkbox"
-                                            class="size-4 rounded border-input focus-visible:ring-2 focus-visible:ring-ring"
-                                            :checked="
-                                                selectedEquipment[item.id] !==
-                                                undefined
-                                            "
-                                            @change="
-                                                updateEquipmentSelection(
-                                                    item,
-                                                    $event,
-                                                )
-                                            "
-                                        />
-                                        <span
-                                            >{{ item.name }}
-                                            <span
-                                                class="font-normal text-muted-foreground"
-                                                >({{
-                                                    item.quantity
-                                                }}
-                                                configured)</span
-                                            ></span
+                                        <option :value="null">
+                                            Choose a centre
+                                        </option>
+                                        <option
+                                            v-for="centre in centres"
+                                            :key="centre.id"
+                                            :value="centre.id"
                                         >
-                                    </Label>
-                                    <div class="grid gap-1">
+                                            {{ centre.name }}
+                                        </option>
+                                    </select>
+                                    <InputError
+                                        id="centre-error"
+                                        :message="fieldErrors.centre_id"
+                                    />
+                                    <p
+                                        v-if="centres.length === 0"
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        No venues are currently available.
+                                    </p>
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="facility">Facility</Label>
+                                    <select
+                                        id="facility"
+                                        v-model="selectedFacilityId"
+                                        :disabled="!selectedCentreId"
+                                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        :aria-invalid="
+                                            Boolean(fieldErrors.facility_id)
+                                        "
+                                        aria-describedby="facility-error"
+                                    >
+                                        <option :value="null">
+                                            Choose a facility
+                                        </option>
+                                        <option
+                                            v-for="facility in facilitiesForCentre"
+                                            :key="facility.id"
+                                            :value="facility.id"
+                                        >
+                                            {{ facility.name }}
+                                        </option>
+                                    </select>
+                                    <InputError
+                                        id="facility-error"
+                                        :message="fieldErrors.facility_id"
+                                    />
+                                    <p
+                                        v-if="
+                                            selectedCentreId &&
+                                            facilitiesForCentre.length === 0
+                                        "
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        No facilities are currently available at
+                                        this venue.
+                                    </p>
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="resource">Resource</Label>
+                                    <select
+                                        id="resource"
+                                        v-model="selectedResourceId"
+                                        :disabled="!selectedFacilityId"
+                                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        :aria-invalid="
+                                            Boolean(fieldErrors.resource_id)
+                                        "
+                                        aria-describedby="resource-error"
+                                    >
+                                        <option :value="null">
+                                            Choose a resource
+                                        </option>
+                                        <option
+                                            v-for="resource in resourcesForFacility"
+                                            :key="resource.id"
+                                            :value="resource.id"
+                                        >
+                                            {{ resource.name }}
+                                        </option>
+                                    </select>
+                                    <InputError
+                                        id="resource-error"
+                                        :message="fieldErrors.resource_id"
+                                    />
+                                    <p
+                                        v-if="
+                                            selectedFacilityId &&
+                                            resourcesForFacility.length === 0
+                                        "
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        No bookable resources are currently
+                                        available for this facility.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Date and time</CardTitle>
+                                <CardDescription
+                                    >Booking lengths vary by resource. Choose
+                                    the time you need.</CardDescription
+                                >
+                            </CardHeader>
+                            <CardContent
+                                class="grid gap-5 lg:grid-cols-3 [&_input]:min-w-0 [&>div]:min-w-0"
+                            >
+                                <div class="grid gap-2">
+                                    <Label for="date">Date</Label>
+                                    <Input
+                                        id="date"
+                                        v-model="selectedDate"
+                                        type="date"
+                                        :aria-invalid="
+                                            Boolean(fieldErrors.date)
+                                        "
+                                        aria-describedby="date-error"
+                                    />
+                                    <InputError
+                                        id="date-error"
+                                        :message="fieldErrors.date"
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="starts-at">Start time</Label>
+                                    <Input
+                                        id="starts-at"
+                                        v-model="startsAt"
+                                        type="time"
+                                        :aria-invalid="
+                                            Boolean(fieldErrors.starts_at)
+                                        "
+                                        aria-describedby="starts-at-error"
+                                    />
+                                    <InputError
+                                        id="starts-at-error"
+                                        :message="fieldErrors.starts_at"
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="ends-at">End time</Label>
+                                    <Input
+                                        id="ends-at"
+                                        v-model="endsAt"
+                                        type="time"
+                                        :aria-invalid="
+                                            Boolean(fieldErrors.ends_at)
+                                        "
+                                        aria-describedby="ends-at-error"
+                                    />
+                                    <InputError
+                                        id="ends-at-error"
+                                        :message="fieldErrors.ends_at"
+                                    />
+                                </div>
+                            </CardContent>
+                            <CardContent
+                                v-if="duration"
+                                class="pt-0 text-sm text-muted-foreground"
+                                >Selected duration:
+                                <span class="font-medium text-foreground">{{
+                                    duration
+                                }}</span></CardContent
+                            >
+                        </Card>
+
+                        <Card v-if="selectedCentreId">
+                            <CardHeader>
+                                <CardTitle
+                                    >Equipment
+                                    <span
+                                        class="font-normal text-muted-foreground"
+                                        >(optional)</span
+                                    ></CardTitle
+                                >
+                                <CardDescription
+                                    >Add equipment to this selection if you need
+                                    it.</CardDescription
+                                >
+                            </CardHeader>
+                            <CardContent>
+                                <p
+                                    v-if="compatibleEquipment.length === 0"
+                                    class="text-sm text-muted-foreground"
+                                >
+                                    No optional equipment is available for this
+                                    selection.
+                                </p>
+                                <div v-else class="space-y-3">
+                                    <div
+                                        v-for="item in compatibleEquipment"
+                                        :key="item.id"
+                                        class="grid gap-3 rounded-lg border p-4 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center"
+                                    >
                                         <Label
-                                            :for="`equipment-quantity-${item.id}`"
-                                            class="text-xs"
-                                            >Quantity</Label
+                                            :for="`equipment-${item.id}`"
+                                            class="leading-5"
                                         >
-                                        <Input
-                                            :id="`equipment-quantity-${item.id}`"
-                                            v-model.number="
-                                                selectedEquipment[item.id]
-                                            "
-                                            type="number"
-                                            min="1"
-                                            :disabled="
-                                                selectedEquipment[item.id] ===
-                                                undefined
-                                            "
-                                            @input="clearAvailabilityState"
-                                        />
+                                            <input
+                                                :id="`equipment-${item.id}`"
+                                                type="checkbox"
+                                                class="size-4 rounded border-input focus-visible:ring-2 focus-visible:ring-ring"
+                                                :checked="
+                                                    selectedEquipment[
+                                                        item.id
+                                                    ] !== undefined
+                                                "
+                                                @change="
+                                                    updateEquipmentSelection(
+                                                        item,
+                                                        $event,
+                                                    )
+                                                "
+                                            />
+                                            <span
+                                                >{{ item.name }}
+                                                <span
+                                                    class="font-normal text-muted-foreground"
+                                                    >({{
+                                                        item.quantity
+                                                    }}
+                                                    configured)</span
+                                                ></span
+                                            >
+                                        </Label>
+                                        <div class="grid gap-1">
+                                            <Label
+                                                :for="`equipment-quantity-${item.id}`"
+                                                class="text-xs"
+                                                >Quantity</Label
+                                            >
+                                            <Input
+                                                :id="`equipment-quantity-${item.id}`"
+                                                v-model.number="
+                                                    selectedEquipment[item.id]
+                                                "
+                                                type="number"
+                                                min="1"
+                                                :disabled="
+                                                    selectedEquipment[
+                                                        item.id
+                                                    ] === undefined
+                                                "
+                                                @input="clearAvailabilityState"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
 
-                    <Button
-                        type="submit"
-                        class="w-full sm:w-auto"
-                        :disabled="isChecking || isQuoting"
-                    >
-                        <Spinner v-if="isChecking || isQuoting" />
-                        {{
-                            isChecking
-                                ? 'Checking availability…'
-                                : isQuoting
-                                  ? 'Calculating price…'
-                                  : 'Check availability'
-                        }}
-                    </Button>
-                    <p
-                        v-if="isChecking || isQuoting"
-                        class="sr-only"
-                        role="status"
-                    >
-                        {{
-                            isChecking
-                                ? 'Checking current availability.'
-                                : 'Calculating the estimated price.'
-                        }}
-                    </p>
-                </form>
-            </section>
+                        <Button
+                            type="submit"
+                            class="w-full sm:w-auto"
+                            :disabled="isChecking || isQuoting"
+                        >
+                            <Spinner v-if="isChecking || isQuoting" />
+                            {{
+                                isChecking
+                                    ? 'Checking availability…'
+                                    : isQuoting
+                                      ? 'Calculating price…'
+                                      : 'Check availability'
+                            }}
+                        </Button>
+                        <p
+                            v-if="isChecking || isQuoting"
+                            class="sr-only"
+                            role="status"
+                        >
+                            {{
+                                isChecking
+                                    ? 'Checking current availability.'
+                                    : 'Calculating the estimated price.'
+                            }}
+                        </p>
+                    </form>
+                </section>
 
-            <aside class="space-y-4 lg:pt-28" aria-live="polite">
-                <AvailabilityResult
-                    v-if="result"
-                    :result="result"
-                    :reasons="resultReasons"
-                />
-                <Card v-if="quote">
-                    <CardHeader>
-                        <CardTitle>Estimated price</CardTitle>
-                        <CardDescription>
-                            Estimated price for this selection.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="space-y-5">
-                        <dl class="grid gap-3 text-sm">
-                            <div class="grid gap-1">
-                                <dt class="text-muted-foreground">Centre</dt>
-                                <dd class="font-medium">
-                                    {{ selectedCentre?.name }}
-                                </dd>
-                            </div>
-                            <div class="grid gap-1">
-                                <dt class="text-muted-foreground">Facility</dt>
-                                <dd class="font-medium">
-                                    {{ selectedFacility?.name }}
-                                </dd>
-                            </div>
-                            <div class="grid gap-1">
-                                <dt class="text-muted-foreground">
-                                    Bookable option
-                                </dt>
-                                <dd class="font-medium">
-                                    {{ quote.data.resource.name }}
-                                </dd>
-                            </div>
-                            <div class="grid gap-1">
-                                <dt class="text-muted-foreground">Date</dt>
-                                <dd class="font-medium">
-                                    {{ selectedDate }}
-                                </dd>
-                            </div>
-                            <div class="grid gap-1">
-                                <dt class="text-muted-foreground">Time</dt>
-                                <dd class="font-medium">
-                                    {{ startsAt }}–{{ endsAt }}
-                                </dd>
-                            </div>
-                            <div class="grid gap-1">
-                                <dt class="text-muted-foreground">Duration</dt>
-                                <dd class="font-medium">
-                                    {{
-                                        formatDuration(
-                                            quote.data.duration_seconds,
-                                        )
-                                    }}
-                                </dd>
-                            </div>
-                        </dl>
-
-                        <div class="space-y-3 border-t pt-4">
-                            <div class="flex items-start justify-between gap-4">
-                                <div>
-                                    <p class="font-medium">
+                <aside class="min-w-0 space-y-4" aria-live="polite">
+                    <AvailabilityResult
+                        v-if="result"
+                        :result="result"
+                        :reasons="resultReasons"
+                    />
+                    <Card v-if="quote">
+                        <CardHeader>
+                            <CardTitle>Estimated price</CardTitle>
+                            <CardDescription>
+                                Estimated price for this selection.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent class="space-y-5">
+                            <dl class="grid gap-3 text-sm">
+                                <div class="grid gap-1">
+                                    <dt class="text-muted-foreground">
+                                        Centre
+                                    </dt>
+                                    <dd class="font-medium">
+                                        {{ selectedCentre?.name }}
+                                    </dd>
+                                </div>
+                                <div class="grid gap-1">
+                                    <dt class="text-muted-foreground">
+                                        Facility
+                                    </dt>
+                                    <dd class="font-medium">
+                                        {{ selectedFacility?.name }}
+                                    </dd>
+                                </div>
+                                <div class="grid gap-1">
+                                    <dt class="text-muted-foreground">
+                                        Bookable option
+                                    </dt>
+                                    <dd class="font-medium">
                                         {{ quote.data.resource.name }}
-                                    </p>
-                                    <p class="text-sm text-muted-foreground">
+                                    </dd>
+                                </div>
+                                <div class="grid gap-1">
+                                    <dt class="text-muted-foreground">Date</dt>
+                                    <dd class="font-medium">
+                                        {{ selectedDate }}
+                                    </dd>
+                                </div>
+                                <div class="grid gap-1">
+                                    <dt class="text-muted-foreground">Time</dt>
+                                    <dd class="font-medium">
+                                        {{ startsAt }}–{{ endsAt }}
+                                    </dd>
+                                </div>
+                                <div class="grid gap-1">
+                                    <dt class="text-muted-foreground">
+                                        Duration
+                                    </dt>
+                                    <dd class="font-medium">
+                                        {{
+                                            formatDuration(
+                                                quote.data.duration_seconds,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <div class="space-y-3 border-t pt-4">
+                                <div
+                                    class="flex items-start justify-between gap-4"
+                                >
+                                    <div>
+                                        <p class="font-medium">
+                                            {{ quote.data.resource.name }}
+                                        </p>
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            {{
+                                                formatMoney(
+                                                    quote.data.resource
+                                                        .hourly_rate_minor,
+                                                    quote.data.currency,
+                                                )
+                                            }}
+                                            per hour
+                                        </p>
+                                    </div>
+                                    <p class="font-medium">
                                         {{
                                             formatMoney(
                                                 quote.data.resource
-                                                    .hourly_rate_minor,
+                                                    .amount_minor,
                                                 quote.data.currency,
                                             )
                                         }}
-                                        per hour
                                     </p>
                                 </div>
-                                <p class="font-medium">
-                                    {{
-                                        formatMoney(
-                                            quote.data.resource.amount_minor,
-                                            quote.data.currency,
-                                        )
-                                    }}
-                                </p>
-                            </div>
-                            <div
-                                v-for="item in quote.data.equipment"
-                                :key="item.name"
-                                class="flex items-start justify-between gap-4"
-                            >
-                                <div>
+                                <div
+                                    v-for="item in quote.data.equipment"
+                                    :key="item.name"
+                                    class="flex items-start justify-between gap-4"
+                                >
+                                    <div>
+                                        <p class="font-medium">
+                                            {{ item.name }} ×
+                                            {{ item.quantity }}
+                                        </p>
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            {{
+                                                item.charge_type === 'included'
+                                                    ? 'Included'
+                                                    : formatMoney(
+                                                          item.hourly_rate_minor,
+                                                          quote.data.currency,
+                                                      ) + ' per hour'
+                                            }}
+                                        </p>
+                                    </div>
                                     <p class="font-medium">
-                                        {{ item.name }} × {{ item.quantity }}
-                                    </p>
-                                    <p class="text-sm text-muted-foreground">
                                         {{
                                             item.charge_type === 'included'
                                                 ? 'Included'
                                                 : formatMoney(
-                                                      item.hourly_rate_minor,
+                                                      item.amount_minor,
                                                       quote.data.currency,
-                                                  ) + ' per hour'
+                                                  )
                                         }}
                                     </p>
                                 </div>
-                                <p class="font-medium">
-                                    {{
-                                        item.charge_type === 'included'
-                                            ? 'Included'
-                                            : formatMoney(
-                                                  item.amount_minor,
-                                                  quote.data.currency,
-                                              )
-                                    }}
-                                </p>
                             </div>
-                        </div>
 
-                        <div class="space-y-2 border-t pt-4 text-sm">
-                            <div class="flex justify-between gap-4">
-                                <span>Subtotal</span>
-                                <span>{{
-                                    formatMoney(
-                                        quote.data.subtotal_minor,
-                                        quote.data.currency,
-                                    )
-                                }}</span>
+                            <div class="space-y-2 border-t pt-4 text-sm">
+                                <div class="flex justify-between gap-4">
+                                    <span>Subtotal</span>
+                                    <span>{{
+                                        formatMoney(
+                                            quote.data.subtotal_minor,
+                                            quote.data.currency,
+                                        )
+                                    }}</span>
+                                </div>
+                                <div
+                                    v-if="quote.data.discount_minor !== null"
+                                    class="flex justify-between gap-4"
+                                >
+                                    <span>Discount</span>
+                                    <span>{{
+                                        formatMoney(
+                                            -quote.data.discount_minor,
+                                            quote.data.currency,
+                                        )
+                                    }}</span>
+                                </div>
+                                <div
+                                    class="flex justify-between gap-4 border-t pt-2 text-base font-semibold"
+                                >
+                                    <span>Estimated total</span>
+                                    <span>{{
+                                        formatMoney(
+                                            quote.data.final_total_minor,
+                                            quote.data.currency,
+                                        )
+                                    }}</span>
+                                </div>
                             </div>
-                            <div
-                                v-if="quote.data.discount_minor !== null"
-                                class="flex justify-between gap-4"
-                            >
-                                <span>Discount</span>
-                                <span>{{
-                                    formatMoney(
-                                        -quote.data.discount_minor,
-                                        quote.data.currency,
-                                    )
-                                }}</span>
-                            </div>
-                            <div
-                                class="flex justify-between gap-4 border-t pt-2 text-base font-semibold"
-                            >
-                                <span>Estimated total</span>
-                                <span>{{
-                                    formatMoney(
-                                        quote.data.final_total_minor,
-                                        quote.data.currency,
-                                    )
-                                }}</span>
-                            </div>
-                        </div>
 
-                        <p class="text-sm text-muted-foreground">
-                            Availability and pricing will be rechecked when you
-                            submit a booking request.
-                        </p>
-                        <Button v-if="canContinue" class="w-full" as-child>
-                            <Link :href="reviewHref" preserve-state>
-                                Continue to booking
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-                <Alert
-                    v-else-if="result?.data.available && quoteError"
-                    variant="destructive"
-                >
-                    <AlertTitle>Pricing is unavailable</AlertTitle>
-                    <AlertDescription>{{ quoteError }}</AlertDescription>
-                </Alert>
-                <Alert v-else-if="reviewError" variant="destructive">
-                    <AlertTitle>Review needs an updated price</AlertTitle>
-                    <AlertDescription>{{ reviewError }}</AlertDescription>
-                </Alert>
-                <Alert v-else-if="requestError" variant="destructive">
-                    <AlertTitle>We need a little more information.</AlertTitle>
-                    <AlertDescription>{{ requestError }}</AlertDescription>
-                </Alert>
-                <Card v-else class="hidden lg:flex">
-                    <CardHeader>
-                        <CardTitle>Current availability</CardTitle>
-                        <CardDescription
-                            >Your result will appear here after you check your
-                            selection.</CardDescription
+                            <p class="text-sm text-muted-foreground">
+                                Availability and pricing will be rechecked when
+                                you submit a booking request.
+                            </p>
+                            <Button v-if="canContinue" class="w-full" as-child>
+                                <Link :href="reviewHref" preserve-state>
+                                    Continue to booking
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                    <Alert
+                        v-else-if="result?.data.available && quoteError"
+                        variant="destructive"
+                    >
+                        <AlertTitle>Pricing is unavailable</AlertTitle>
+                        <AlertDescription>{{ quoteError }}</AlertDescription>
+                    </Alert>
+                    <Alert v-else-if="reviewError" variant="destructive">
+                        <AlertTitle>Review needs an updated price</AlertTitle>
+                        <AlertDescription>{{ reviewError }}</AlertDescription>
+                    </Alert>
+                    <Alert v-else-if="requestError" variant="destructive">
+                        <AlertTitle
+                            >We need a little more information.</AlertTitle
                         >
-                    </CardHeader>
-                </Card>
-            </aside>
+                        <AlertDescription>{{ requestError }}</AlertDescription>
+                    </Alert>
+                    <Card v-else class="hidden xl:flex">
+                        <CardHeader>
+                            <CardTitle>Current availability</CardTitle>
+                            <CardDescription
+                                >Your result will appear here after you check
+                                your selection.</CardDescription
+                            >
+                        </CardHeader>
+                    </Card>
+                </aside>
+            </div>
         </div>
-    </main>
+    </div>
 </template>

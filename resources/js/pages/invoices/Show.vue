@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeft } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,11 +24,14 @@ function money(amount: number, currency: string): string {
         <Head :title="`Invoice ${invoice.reference}`" />
         <Card class="mx-auto max-w-3xl">
             <CardContent class="space-y-6 py-6">
-                <Link
-                    :href="index()"
-                    class="text-sm text-muted-foreground underline"
-                    >My invoices</Link
-                >
+                <div>
+                    <Button as-child variant="outline" class="h-11 sm:h-9">
+                        <Link :href="index()">
+                            <ArrowLeft aria-hidden="true" />
+                            My invoices
+                        </Link>
+                    </Button>
+                </div>
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0">
                         <h1 class="text-2xl font-semibold break-words">

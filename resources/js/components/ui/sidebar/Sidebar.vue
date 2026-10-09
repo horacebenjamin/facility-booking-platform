@@ -18,6 +18,11 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 })
 
 const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+
+function returnFocusToTrigger(event: Event) {
+  event.preventDefault()
+  document.querySelector<HTMLElement>('[data-sidebar="trigger"]')?.focus()
+}
 </script>
 
 <template>
@@ -36,14 +41,15 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
       data-slot="sidebar"
       data-mobile="true"
       :side="side"
-      class="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
+      class="bg-sidebar text-sidebar-foreground w-(--sidebar-width) max-w-[calc(100vw-2rem)] gap-0 p-0 [&>button]:top-3 [&>button]:right-2 [&>button]:flex [&>button]:size-11 [&>button]:items-center [&>button]:justify-center"
+      @close-auto-focus="returnFocusToTrigger"
       :style="{
         '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
       }"
     >
       <SheetHeader class="sr-only">
-        <SheetTitle>Sidebar</SheetTitle>
-        <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+        <SheetTitle>Navigation</SheetTitle>
+        <SheetDescription>Browse facilities and access your account.</SheetDescription>
       </SheetHeader>
       <div class="flex h-full w-full flex-col">
         <slot />
@@ -63,7 +69,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
     <!-- This is what handles the sidebar gap on desktop  -->
     <div
       :class="cn(
-        'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear',
+        'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear motion-reduce:transition-none',
         'group-data-[collapsible=offcanvas]:w-0',
         'group-data-[side=right]:rotate-180',
         variant === 'floating' || variant === 'inset'
@@ -73,7 +79,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
     />
     <div
       :class="cn(
-        'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
+        'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear motion-reduce:transition-none md:flex',
         side === 'left'
           ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
           : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',

@@ -5,6 +5,7 @@ import NotificationIndex from '@/pages/notifications/Index.vue';
 import type { CustomerNotification } from '@/types/notification';
 
 vi.mock('@inertiajs/vue3', () => ({
+    usePage: () => ({ props: { bookingTimezone: 'Europe/London' } }),
     Head: defineComponent({ render: () => null }),
     Link: defineComponent({
         props: ['href'],

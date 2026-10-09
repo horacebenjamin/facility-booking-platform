@@ -16,7 +16,7 @@ class CustomerNotificationController extends Controller
 
         return Inertia::render('notifications/Index', [
             'notifications' => $request->user()->notifications()
-                ->orderByDesc('created_at')->orderByDesc('id')->paginate(50)
+                ->orderByDesc('created_at')->orderByDesc('id')->paginate(5)
                 ->through(fn (DatabaseNotification $notification): array => $this->summary($notification)),
             'unread_count' => $request->user()->unreadNotifications()->count(),
         ]);

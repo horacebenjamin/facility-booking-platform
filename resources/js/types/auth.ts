@@ -12,7 +12,7 @@ export type User = {
 };
 
 export type Auth = {
-    user: User;
+    user: User | null;
     canUseCustomerArea: boolean;
     workspace: 'management' | 'operations' | 'customer' | 'public';
     workspaceUrl: string;

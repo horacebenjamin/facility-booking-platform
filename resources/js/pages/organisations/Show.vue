@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { ArrowLeft, CalendarDays, ReceiptText, Search } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,10 +64,13 @@ function memberErrors(errors: Record<string, string>): string | undefined {
     <div class="w-full flex-1 space-y-6 p-4 md:p-6">
         <Head :title="organisation.name" />
 
-        <div class="mx-auto max-w-3xl space-y-2">
-            <Link :href="organisationIndex()" class="text-sm underline"
-                >Back to organisations</Link
-            >
+        <div class="mx-auto max-w-3xl space-y-4">
+            <Button as-child variant="outline" class="h-11 sm:h-9">
+                <Link :href="organisationIndex()">
+                    <ArrowLeft aria-hidden="true" />
+                    Back to organisations
+                </Link>
+            </Button>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h1 class="text-2xl font-semibold">{{ organisation.name }}</h1>
                 <Badge variant="secondary"
@@ -91,25 +95,41 @@ function memberErrors(errors: Record<string, string>): string | undefined {
                     change your access anywhere else.
                 </CardDescription>
             </CardHeader>
-            <CardContent class="flex flex-wrap gap-3 text-sm">
-                <Link
-                    v-if="organisation.can_create_bookings"
-                    :href="availabilityIndex()"
-                    class="underline"
-                    >Find a facility to book for this organisation</Link
-                >
-                <Link
-                    v-if="organisation.can_view_bookings"
-                    :href="bookingIndex()"
-                    class="underline"
-                    >View organisation bookings</Link
-                >
-                <Link
-                    v-if="organisation.can_view_finance"
-                    :href="invoiceIndex()"
-                    class="underline"
-                    >View organisation invoices</Link
-                >
+            <CardContent class="space-y-4 text-sm">
+                <div class="flex flex-wrap gap-3">
+                    <Button
+                        v-if="organisation.can_create_bookings"
+                        as-child
+                        class="h-auto min-h-11 py-2 text-left whitespace-normal sm:min-h-9"
+                    >
+                        <Link :href="availabilityIndex()">
+                            <Search aria-hidden="true" />
+                            Find a facility to book for this organisation
+                        </Link>
+                    </Button>
+                    <Button
+                        v-if="organisation.can_view_bookings"
+                        as-child
+                        variant="outline"
+                        class="h-auto min-h-11 py-2 text-left whitespace-normal sm:min-h-9"
+                    >
+                        <Link :href="bookingIndex()">
+                            <CalendarDays aria-hidden="true" />
+                            View organisation bookings
+                        </Link>
+                    </Button>
+                    <Button
+                        v-if="organisation.can_view_finance"
+                        as-child
+                        variant="outline"
+                        class="h-auto min-h-11 py-2 text-left whitespace-normal sm:min-h-9"
+                    >
+                        <Link :href="invoiceIndex()">
+                            <ReceiptText aria-hidden="true" />
+                            View organisation invoices
+                        </Link>
+                    </Button>
+                </div>
                 <form
                     v-if="organisation.can_view_finance"
                     method="get"
@@ -217,7 +237,7 @@ function memberErrors(errors: Record<string, string>): string | undefined {
                                         <span
                                             v-if="
                                                 member.user_id ===
-                                                page.props.auth.user.id
+                                                page.props.auth.user?.id
                                             "
                                             class="text-sm font-normal text-muted-foreground"
                                             >(you)</span
@@ -296,7 +316,7 @@ function memberErrors(errors: Record<string, string>): string | undefined {
                                         :disabled="processing"
                                         >{{
                                             member.user_id ===
-                                            page.props.auth.user.id
+                                            page.props.auth.user?.id
                                                 ? 'Leave organisation'
                                                 : 'Remove member'
                                         }}</Button

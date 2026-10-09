@@ -17,8 +17,18 @@ withDefaults(defineProps<Props>(), {
 
 <template>
     <AppShell variant="sidebar">
+        <a
+            href="#main-content"
+            class="sr-only z-50 rounded-md bg-card p-3 text-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+            >Skip to content</a
+        >
         <AppSidebar />
-        <AppContent variant="sidebar" class="min-w-0 overflow-x-clip">
+        <AppContent
+            id="main-content"
+            tabindex="-1"
+            variant="sidebar"
+            class="min-w-0 [overflow-wrap:anywhere]"
+        >
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </AppContent>

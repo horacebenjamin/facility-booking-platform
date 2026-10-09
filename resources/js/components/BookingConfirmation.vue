@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { CheckCircle2 } from '@lucide/vue';
 import BookingSummary from '@/components/BookingSummary.vue';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/StatusBadge.vue';
 import {
     Card,
     CardContent,
@@ -24,10 +24,10 @@ defineProps<{
 
 <template>
     <div class="space-y-6">
-        <Card class="border-green-700/30 bg-green-50 dark:bg-green-950/20">
+        <Card class="border-success bg-card">
             <CardHeader>
                 <div
-                    class="flex size-11 items-center justify-center rounded-full bg-green-700 text-white"
+                    class="flex size-11 items-center justify-center rounded-full bg-success text-success-foreground"
                 >
                     <CheckCircle2 class="size-6" aria-hidden="true" />
                 </div>
@@ -41,7 +41,7 @@ defineProps<{
             </CardHeader>
             <CardContent class="space-y-4">
                 <div class="flex flex-wrap items-center gap-3">
-                    <div>
+                    <div class="min-w-0">
                         <p class="text-sm text-muted-foreground">
                             Booking reference
                         </p>
@@ -49,12 +49,7 @@ defineProps<{
                             {{ booking.reference }}
                         </p>
                     </div>
-                    <Badge
-                        variant="outline"
-                        class="border-amber-700/30 bg-amber-50 text-amber-950 dark:bg-amber-950/30 dark:text-amber-50"
-                    >
-                        {{ booking.status_label }}
-                    </Badge>
+                    <StatusBadge :label="booking.status_label" tone="warning" />
                 </div>
                 <div v-if="booking.organisation_name" class="text-sm">
                     <p class="text-muted-foreground">Organisation</p>

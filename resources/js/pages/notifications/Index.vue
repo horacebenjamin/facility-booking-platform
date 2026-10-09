@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import EmptyState from '@/components/EmptyState.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import StatusBadge from '@/components/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatBookingDateTime } from '@/lib/bookingDateTime';
@@ -19,38 +22,42 @@ function timestamp(value: string): string {
 </script>
 
 <template>
-    <div class="w-full flex-1 p-4 md:p-6">
+    <div class="mx-auto w-full max-w-4xl min-w-0 flex-1 space-y-6 p-4 md:p-6">
         <Head title="Notifications" />
-        <Card class="mx-auto max-w-3xl">
+        <PageHeader
+            title="Notifications"
+            :description="`Booking, payment and invoice updates · ${unread_count} unread`"
+        />
+        <EmptyState
+            v-if="notifications.data.length === 0"
+            title="You're up to date"
+            description="You have no notifications yet."
+        />
+        <Card v-else>
             <CardContent class="space-y-6 py-6">
-                <div class="space-y-2">
-                    <h1 class="text-2xl font-semibold">Notifications</h1>
-                    <p class="text-sm text-muted-foreground">
-                        Booking, payment and invoice updates ·
-                        {{ unread_count }} unread
-                    </p>
-                </div>
-                <p v-if="notifications.data.length === 0">
-                    You have no notifications yet.
-                </p>
-                <ul v-else class="space-y-6">
+                <ul class="space-y-6">
                     <li
                         v-for="notification in notifications.data"
                         :key="notification.id"
                         class="space-y-3 border-b pb-6"
                     >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h2 class="font-semibold">
+                        <div class="flex items-start justify-between gap-3">
+                            <h2
+                                class="min-w-0 font-semibold [overflow-wrap:anywhere]"
+                            >
                                 {{ notification.title }}
                             </h2>
-                            <span
-                                v-if="!notification.read_at"
-                                class="rounded bg-primary/10 px-2 py-1 text-xs font-medium"
-                                >Unread</span
-                            >
-                            <span v-else class="text-xs text-muted-foreground"
-                                >Read</span
-                            >
+                            <StatusBadge
+                                :label="
+                                    notification.read_at ? 'Read' : 'Unread'
+                                "
+                                :tone="
+                                    notification.read_at
+                                        ? 'neutral'
+                                        : 'information'
+                                "
+                                class="shrink-0"
+                            />
                         </div>
                         <p class="text-sm leading-6 whitespace-pre-line">
                             {{ notification.body }}
@@ -61,15 +68,20 @@ function timestamp(value: string): string {
                             class="block text-xs text-muted-foreground"
                             >{{ timestamp(notification.occurred_at) }}</time
                         >
-                        <div class="flex flex-wrap items-center gap-4">
-                            <Link
+                        <div
+                            class="flex flex-wrap items-center justify-end gap-3"
+                        >
+                            <Button
                                 v-if="notification.action_url"
-                                :href="notification.action_url"
-                                class="text-sm underline"
-                                >{{
-                                    notification.action_label ?? 'View details'
-                                }}</Link
+                                as-child
+                                variant="outline"
+                                size="sm"
+                                class="h-11 sm:h-8"
                             >
+                                <Link :href="notification.action_url">{{
+                                    notification.action_label ?? 'View details'
+                                }}</Link>
+                            </Button>
                             <Form
                                 v-if="!notification.read_at"
                                 v-bind="read.form(notification.id)"
@@ -80,6 +92,7 @@ function timestamp(value: string): string {
                                     type="submit"
                                     variant="outline"
                                     size="sm"
+                                    class="h-11 sm:h-8"
                                     :disabled="processing"
                                     :aria-label="`Mark ${notification.title} as read`"
                                     >Mark as read</Button

@@ -1,7 +1,7 @@
 # Facility4Hire — Design System Contract
 
-M25A.1 establishes this contract and the limited Vue foundations described below.
-Screen composition, navigation and status adoption remain later M25 work. This
+M25A.1 establishes this contract and the Vue foundations described below.
+M25A.2 implements the customer shell and initial shared pattern adoption. This
 contract implements the visual direction in [visual-design.md](visual-design.md);
 [requirements.md](requirements.md) and [design.md](design.md) govern behaviour.
 
@@ -138,19 +138,19 @@ associated error text. Show errors inline and, for longer forms, in a linked
 summary. Tables use proper headers, meaningful actions and aligned monetary
 values. Never hide essential status/actions only to fit a viewport.
 
-The following are contracts, not new components implemented in M25A.1:
+The following contracts guide extraction when genuine reuse exists:
 
 | Pattern | Responsibility and existing building blocks | First adoption |
 | --- | --- | --- |
 | PageHeader | h1, context, optional description/actions; adapt Heading | M25A.2 |
 | StatusBadge | Explicit label + semantic tone using Badge; no business inference | M25A.2 |
 | EmptyState | Explain empty state and useful authorised next step; Card/Button | M25A.2 |
-| DashboardSummaryCard | Label, value, optional supporting link; Card | M25A.2, used M25B/C |
-| SectionCard | Labelled section and optional actions; Card composition | M25A.2 |
-| FilterBar | Labelled inputs, apply/reset and results context; wrap on mobile | M25A.2, used M25B/C |
-| FormFeedback | Shared errors/success via Alert and existing InputError | M25A.2 |
-| LoadingState | Skeleton matching content; concise accessible loading text | M25A.2 |
-| ErrorState | Explain failure, preserve input and offer safe retry; Alert/Button | M25A.2 |
+| DashboardSummaryCard | Label, value, optional supporting link; Card | M25B/C when needed |
+| SectionCard | Labelled section and optional actions; Card composition | M25B/C when needed |
+| FilterBar | Labelled inputs, apply/reset and results context; wrap on mobile | M25B/C when needed |
+| FormFeedback | Shared errors/success via Alert and existing InputError | Existing primitives; M25B adoption |
+| LoadingState | Skeleton matching content; concise accessible loading text | M25B when needed |
+| ErrorState | Explain failure, preserve input and offer safe retry; Alert/Button | Existing primitives; M25B adoption |
 | BookingCard | Existing booking data, separate lifecycle/payment labels and actions | M25B |
 | BookingStepIndicator | Ordered steps, current step text/aria-current="step" | M25B |
 
@@ -196,10 +196,44 @@ helpers, and preserve server props and action flows. CSS-first Tailwind
 [theme mappings](https://tailwindcss.com/docs/theme) expose semantic utilities;
 use them instead of raw palette classes in new shared patterns.
 
-Implemented now: palette/foreground pairs, success/warning/info mappings,
-consolidated font default, focus fallback, and Button/Badge destructive foreground
-and focus corrections. No new component framework, page redesign or layout is
-implemented. Default and destructive hover opacity still needs contextual review.
+Implemented foundations: palette/foreground pairs, success/warning/info mappings,
+font default, focus fallback, and Button/Badge foreground and focus corrections.
+Default and destructive hover opacity still needs contextual review.
+
+### M25A.2 customer shell decisions
+
+- Availability and booking review use the persistent AppLayout like other customer
+  pages; their sections no longer introduce a nested main landmark. Existing
+  booking refs, query-based selection restoration and submission flows remain intact.
+- AppLogo uses a decorative Building2 icon and Sheffield Community Venues text for
+  guests/customers. Staff-only account contexts retain Facility4Hire. Mixed-role
+  users keep their authorised full-page Filament workspace link.
+- Customer destinations are Dashboard, Find a facility, My bookings, Invoices &
+  payments, Organisations and Notifications. Guests see availability and sign in.
+  Account settings, appearance, security and logout reuse the existing account menu.
+- Existing Sidebar/Sheet supplies desktop collapse and the mobile drawer. The
+  JavaScript breakpoint matches CSS at 768px, controls are labelled, the close
+  button is visible, and dismissal returns focus to the navigation trigger.
+- PageHeader composes Heading with an explicit h1 and optional back/actions slots;
+  breadcrumbs stay in the shared header. Initial adoption covers dashboard,
+  availability, review/receipt, bookings and notifications.
+- StatusBadge accepts an authoritative label and presentation tone, mapped to
+  existing success/warning/destructive/info/muted token pairs. It contains no
+  domain mapping. Request receipts remain awaiting management review; booking
+  lifecycle and financial labels remain separate.
+- EmptyState composes Card with a heading, explanation and optional action slot,
+  initially used for bookings and notifications. Button defaults are primary,
+  outline buttons secondary, TextLink underlined tertiary, and destructive buttons
+  retain the existing destructive variant. No new payment or cancellation action
+  is introduced.
+- Remove content overflow clipping. Use min-w-0 on flexible content, inherited
+  overflow-wrap:anywhere for long identifiers, max-w-7xl for discovery/dashboard/
+  bookings and max-w-4xl for review/notifications. Booking list actions wrap while
+  invoice references remain readable links. Availability's summary starts alongside
+  the form at xl, accounting for sidebar space; fields stack below lg.
+- New shell/drawer transitions respect reduced motion and use semantic light/dark
+  tokens. Detailed page composition, feedback and full accessibility acceptance
+  remain M25B/M25E work.
 
 ## 11. Filament implementation
 

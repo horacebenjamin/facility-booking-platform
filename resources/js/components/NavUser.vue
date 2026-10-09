@@ -22,7 +22,7 @@ const { isMobile, state } = useSidebar();
 </script>
 
 <template>
-    <SidebarMenu>
+    <SidebarMenu v-if="user">
         <SidebarMenuItem>
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
@@ -30,19 +30,23 @@ const { isMobile, state } = useSidebar();
                         size="lg"
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         data-test="sidebar-menu-button"
+                        :aria-label="`Account menu for ${user.name}`"
                     >
                         <UserInfo :user="user" />
-                        <ChevronsUpDown class="ml-auto size-4" />
+                        <ChevronsUpDown
+                            class="ml-auto size-4"
+                            aria-hidden="true"
+                        />
                     </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     class="w-(--reka-dropdown-menu-trigger-width) min-w-56 rounded-lg"
                     :side="
                         isMobile
-                            ? 'bottom'
+                            ? 'top'
                             : state === 'collapsed'
-                              ? 'left'
-                              : 'bottom'
+                              ? 'right'
+                              : 'top'
                     "
                     align="end"
                     :side-offset="4"

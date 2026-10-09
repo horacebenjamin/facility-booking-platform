@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { CalendarDays, FileText } from '@lucide/vue';
+import PageHeader from '@/components/PageHeader.vue';
+import StatusBadge from '@/components/StatusBadge.vue';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatInvoiceDate, shortInvoiceReference } from '@/lib/invoice';
 import { index as bookingIndex } from '@/routes/bookings';
 import { show } from '@/routes/invoices';
 import { personal as personalStatement } from '@/routes/statements';
@@ -23,6 +28,10 @@ function statementError(field: 'from' | 'to'): string | undefined {
     return page.props.errors?.[field];
 }
 
+function statusTone(invoice: InvoiceSummary): 'success' | 'neutral' {
+    return invoice.status === 'paid' ? 'success' : 'neutral';
+}
+
 function money(amount: number, currency: string): string {
     return new Intl.NumberFormat('en-GB', {
         style: 'currency',
@@ -32,11 +41,23 @@ function money(amount: number, currency: string): string {
 </script>
 
 <template>
-    <div class="w-full flex-1 p-4 md:p-6">
+    <div class="mx-auto w-full max-w-4xl min-w-0 flex-1 space-y-6 p-4 md:p-6">
         <Head title="My invoices" />
-        <Card class="mx-auto max-w-3xl">
+        <PageHeader
+            title="My invoices"
+            description="Your latest 50 invoices under agreed billing terms, including invoices for organisations where you have finance access."
+        >
+            <template #actions>
+                <Button as-child variant="outline" class="h-11 sm:h-9">
+                    <Link :href="bookingIndex()">
+                        <CalendarDays aria-hidden="true" />
+                        My bookings
+                    </Link>
+                </Button>
+            </template>
+        </PageHeader>
+        <Card>
             <CardContent class="space-y-4 py-6">
-                <h1 class="text-2xl font-semibold">My invoices</h1>
                 <form
                     method="get"
                     :action="personalStatement.url()"
@@ -110,48 +131,208 @@ function money(amount: number, currency: string): string {
                         </button>
                     </div>
                 </form>
-                <Link :href="bookingIndex()" class="text-sm underline"
-                    >My bookings</Link
-                >
-                <p class="text-sm text-muted-foreground">
-                    Your latest 50 invoices under agreed billing terms,
-                    including invoices for organisations where you have finance
-                    access.
-                </p>
                 <p v-if="invoices.length === 0">You have no issued invoices.</p>
-                <ul class="space-y-4">
-                    <li
-                        v-for="invoice in invoices"
-                        :key="invoice.id"
-                        class="space-y-2 border-b pb-4"
-                    >
-                        <Link
-                            :href="show(invoice.id)"
-                            class="font-medium underline"
-                            >{{ invoice.reference }}</Link
+                <div v-if="invoices.length > 0">
+                    <table class="hidden w-full text-sm lg:table">
+                        <caption class="sr-only">
+                            Your latest invoices
+                        </caption>
+                        <thead>
+                            <tr
+                                class="border-b text-left text-muted-foreground"
+                            >
+                                <th scope="col" class="py-2 pr-4 font-medium">
+                                    Total
+                                </th>
+                                <th scope="col" class="py-2 pr-4 font-medium">
+                                    Outstanding
+                                </th>
+                                <th scope="col" class="py-2 pr-4 font-medium">
+                                    Due date
+                                </th>
+                                <th scope="col" class="py-2 pr-4 font-medium">
+                                    Payment status
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="py-2 text-right font-medium"
+                                >
+                                    Action
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="invoice in invoices"
+                                :key="invoice.id"
+                                class="border-b last:border-b-0"
+                            >
+                                <td class="min-w-0 py-3 pr-4 align-top">
+                                    <p class="font-medium tabular-nums">
+                                        {{
+                                            money(
+                                                invoice.total_minor,
+                                                invoice.currency,
+                                            )
+                                        }}
+                                    </p>
+                                    <p
+                                        class="text-xs text-muted-foreground"
+                                        :title="invoice.reference"
+                                    >
+                                        {{
+                                            shortInvoiceReference(
+                                                invoice.reference,
+                                            )
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="
+                                            invoice.owner_type ===
+                                            'organisation'
+                                        "
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        {{ invoice.owner_name }}
+                                    </p>
+                                </td>
+                                <td class="py-3 pr-4 align-top tabular-nums">
+                                    {{
+                                        money(
+                                            invoice.outstanding_minor,
+                                            invoice.currency,
+                                        )
+                                    }}
+                                </td>
+                                <td class="py-3 pr-4 align-top tabular-nums">
+                                    {{ formatInvoiceDate(invoice.due_date) }}
+                                </td>
+                                <td class="py-3 pr-4 align-top">
+                                    <div class="flex flex-wrap gap-2">
+                                        <StatusBadge
+                                            :label="invoice.status_label"
+                                            :tone="statusTone(invoice)"
+                                        />
+                                        <StatusBadge
+                                            v-if="invoice.overdue"
+                                            label="Overdue"
+                                            tone="warning"
+                                        />
+                                    </div>
+                                </td>
+                                <td class="py-3 text-right align-top">
+                                    <Button
+                                        as-child
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        <Link
+                                            :href="show(invoice.id)"
+                                            :aria-label="`View invoice ${invoice.reference}`"
+                                            >View invoice</Link
+                                        >
+                                    </Button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <ul class="space-y-4 lg:hidden">
+                        <li
+                            v-for="invoice in invoices"
+                            :key="invoice.id"
+                            class="space-y-3 rounded-lg border p-4"
                         >
-                        <p>
-                            {{ invoice.status_label
-                            }}{{ invoice.overdue ? ' · Overdue' : '' }} ·
-                            {{ money(invoice.total_minor, invoice.currency) }}
-                        </p>
-                        <p
-                            v-if="invoice.owner_type === 'organisation'"
-                            class="text-sm text-muted-foreground"
-                        >
-                            Organisation: {{ invoice.owner_name }}
-                        </p>
-                        <p class="text-sm">
-                            Due {{ invoice.due_date }} · Outstanding
-                            {{
-                                money(
-                                    invoice.outstanding_minor,
-                                    invoice.currency,
-                                )
-                            }}
-                        </p>
-                    </li>
-                </ul>
+                            <div
+                                class="flex flex-wrap items-start justify-between gap-2"
+                            >
+                                <div class="min-w-0">
+                                    <p
+                                        class="text-xs text-muted-foreground"
+                                        :title="invoice.reference"
+                                    >
+                                        {{
+                                            shortInvoiceReference(
+                                                invoice.reference,
+                                            )
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="
+                                            invoice.owner_type ===
+                                            'organisation'
+                                        "
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        {{ invoice.owner_name }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <StatusBadge
+                                        :label="invoice.status_label"
+                                        :tone="statusTone(invoice)"
+                                    />
+                                    <StatusBadge
+                                        v-if="invoice.overdue"
+                                        label="Overdue"
+                                        tone="warning"
+                                    />
+                                </div>
+                            </div>
+                            <dl class="grid grid-cols-3 gap-3 text-sm">
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">
+                                        Total
+                                    </dt>
+                                    <dd class="font-medium tabular-nums">
+                                        {{
+                                            money(
+                                                invoice.total_minor,
+                                                invoice.currency,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">
+                                        Outstanding
+                                    </dt>
+                                    <dd class="font-medium tabular-nums">
+                                        {{
+                                            money(
+                                                invoice.outstanding_minor,
+                                                invoice.currency,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">
+                                        Due date
+                                    </dt>
+                                    <dd class="font-medium tabular-nums">
+                                        {{
+                                            formatInvoiceDate(invoice.due_date)
+                                        }}
+                                    </dd>
+                                </div>
+                            </dl>
+                            <Button
+                                as-child
+                                variant="outline"
+                                class="h-11 w-full"
+                            >
+                                <Link
+                                    :href="show(invoice.id)"
+                                    :aria-label="`View invoice ${invoice.reference}`"
+                                >
+                                    <FileText aria-hidden="true" />
+                                    View invoice
+                                </Link>
+                            </Button>
+                        </li>
+                    </ul>
+                </div>
             </CardContent>
         </Card>
     </div>

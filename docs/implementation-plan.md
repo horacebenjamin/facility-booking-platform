@@ -2416,15 +2416,21 @@ Filament interfaces and approved visual references.
 
 Implement in bounded stages:
 
-1. **M25A.1 — Design Contract and Visual Foundations** (current implementation
-   task): scope reconciliation, static product/operator identity, semantic
+1. **M25A.1 — Design Contract and Visual Foundations** (complete, committed at
+   `fa58620`): scope reconciliation, static product/operator identity, semantic
    light/dark tokens, Instrument Sans conventions, shared pattern contracts and
    minimal CSS/primitive foundations. Document Vue/Filament boundaries.
-2. **M25A.2 — Shared Layouts, Navigation and Reusable Components**: first
-   substantial visible redesign; adopt branding in Vue shells, accessible
-   responsive navigation and composed shared UI/feedback/state patterns.
+2. **M25A.2 — Customer Shell, Navigation & Shared UI Foundations** (implemented;
+   manual acceptance pending): operator branding, all six authorised customer
+   destinations, guest navigation, persistent availability/review/recurrence/
+   receipt shell, unclipped responsive widths, initial PageHeader/StatusBadge/
+   EmptyState adoption and consistent actions. Existing account/staff links remain.
 3. **M25B — Customer Experience**: improve existing customer journeys, discovery,
    availability, booking review and account screens using current workflows.
+   Next: detailed BookingCard/step-indicator composition, fuller page-header/status
+   adoption, invoice/organisation/account presentation, and contextual feedback,
+   loading/error and long-form reflow improvements. No new routes, metrics, payment
+   flows or mockup-only capabilities are implied.
 4. **M25C — Management Experience**: native Filament theming, dashboard and
    actionable data/table/form presentation, preserving staff permissions.
 5. **M25D — Operations Experience**: mobile/tablet schedule, Now/Next and

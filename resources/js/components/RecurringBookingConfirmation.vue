@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CheckCircle2 } from '@lucide/vue';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/StatusBadge.vue';
 import {
     Card,
     CardContent,
@@ -30,10 +30,10 @@ function formatDateTime(dateTime: string): string {
 
 <template>
     <div class="space-y-6">
-        <Card class="border-green-700/30 bg-green-50 dark:bg-green-950/20">
+        <Card class="border-success bg-card">
             <CardHeader>
                 <div
-                    class="flex size-11 items-center justify-center rounded-full bg-green-700 text-white"
+                    class="flex size-11 items-center justify-center rounded-full bg-success text-success-foreground"
                 >
                     <CheckCircle2 class="size-6" aria-hidden="true" />
                 </div>
@@ -48,7 +48,7 @@ function formatDateTime(dateTime: string): string {
             </CardHeader>
             <CardContent class="space-y-4">
                 <div class="flex flex-wrap items-center gap-3">
-                    <div>
+                    <div class="min-w-0">
                         <p class="text-sm text-muted-foreground">
                             Series identifier
                         </p>
@@ -56,12 +56,10 @@ function formatDateTime(dateTime: string): string {
                             {{ confirmation.identifier }}
                         </p>
                     </div>
-                    <Badge
-                        variant="outline"
-                        class="border-amber-700/30 bg-amber-50 text-amber-950 dark:bg-amber-950/30 dark:text-amber-50"
-                    >
-                        {{ confirmation.status_label }}
-                    </Badge>
+                    <StatusBadge
+                        :label="confirmation.status_label"
+                        tone="warning"
+                    />
                 </div>
                 <div v-if="confirmation.organisation_name" class="text-sm">
                     <p class="text-muted-foreground">Organisation</p>
@@ -101,7 +99,7 @@ function formatDateTime(dateTime: string): string {
                     <li
                         v-for="occurrence in confirmation.occurrences"
                         :key="occurrence.reference"
-                        class="grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto]"
+                        class="grid min-w-0 gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto]"
                     >
                         <div>
                             <p class="font-medium">
@@ -112,9 +110,11 @@ function formatDateTime(dateTime: string): string {
                                 {{ occurrence.reference }}
                             </p>
                         </div>
-                        <Badge variant="outline" class="w-fit">
-                            Requested
-                        </Badge>
+                        <StatusBadge
+                            label="Requested"
+                            tone="warning"
+                            class="w-fit"
+                        />
                     </li>
                 </ol>
             </CardContent>

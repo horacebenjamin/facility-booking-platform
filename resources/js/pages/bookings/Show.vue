@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { ArrowLeft } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -96,10 +97,13 @@ function localInput(value: string): string {
             class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3"
         >
             <div>
-                <Link :href="bookingIndex()" class="text-sm underline"
-                    >Back to my bookings</Link
-                >
-                <h1 class="mt-2 text-2xl font-semibold">
+                <Button as-child variant="outline" class="h-11 sm:h-9">
+                    <Link :href="bookingIndex()">
+                        <ArrowLeft aria-hidden="true" />
+                        Back to my bookings
+                    </Link>
+                </Button>
+                <h1 class="mt-4 text-2xl font-semibold">
                     Booking {{ booking.reference }}
                 </h1>
             </div>

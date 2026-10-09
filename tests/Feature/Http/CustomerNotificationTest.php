@@ -97,12 +97,12 @@ class CustomerNotificationTest extends TestCase
     public function test_notifications_are_paginated_and_unread_count_includes_other_pages(): void
     {
         $customer = $this->customer();
-        for ($index = 0; $index < 51; $index++) {
+        for ($index = 0; $index < 6; $index++) {
             $this->notification($customer);
         }
         $this->withoutVite()->actingAs($customer)->get(route('notifications.index'))
-            ->assertInertia(fn (Assert $page) => $page->has('notifications.data', 50)
-                ->where('notifications.total', 51)->where('notifications.last_page', 2)->where('unread_count', 51));
+            ->assertInertia(fn (Assert $page) => $page->has('notifications.data', 5)
+                ->where('notifications.total', 6)->where('notifications.last_page', 2)->where('unread_count', 6));
         $this->get(route('notifications.index', ['page' => 2]))
             ->assertInertia(fn (Assert $page) => $page->has('notifications.data', 1)->where('notifications.current_page', 2));
     }

@@ -84,16 +84,34 @@ class CustomerBookingManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('bookings/Index')
-                ->has('bookings', 6)
-                ->where('bookings.0.status', 'rejected')
+                ->has('bookings.data', 6)
+                ->where('bookings.data.0.status', 'rejected')
                 ->where('bookingTimezone', 'Europe/London')
-                ->where('bookings.1.status', 'cancelled')
-                ->where('bookings.2.status', 'completed')
-                ->where('bookings.3.status', 'confirmed')
-                ->where('bookings.4.status', 'expired')
-                ->where('bookings.5.status', 'requested')
-                ->missing('bookings.0.activities')
-                ->missing('bookings.0.payments'));
+                ->where('bookings.data.1.status', 'cancelled')
+                ->where('bookings.data.2.status', 'completed')
+                ->where('bookings.data.3.status', 'confirmed')
+                ->where('bookings.data.4.status', 'expired')
+                ->where('bookings.data.5.status', 'requested')
+                ->missing('bookings.data.0.activities')
+                ->missing('bookings.data.0.payments'));
+    }
+
+    public function test_customer_booking_list_is_paginated(): void
+    {
+        $customer = $this->customer();
+        $fixture = $this->bookableFixture();
+        for ($hour = 0; $hour < 11; $hour++) {
+            $this->booking($customer, $fixture, [
+                'starts_at' => CarbonImmutable::parse('2026-10-05 08:00:00')->addDays($hour)->toDateTimeString(),
+                'ends_at' => CarbonImmutable::parse('2026-10-05 09:00:00')->addDays($hour)->toDateTimeString(),
+            ]);
+        }
+
+        $this->withoutVite()->actingAs($customer)->get(route('bookings.index'))
+            ->assertInertia(fn (Assert $page) => $page->has('bookings.data', 10)
+                ->where('bookings.total', 11)->where('bookings.last_page', 2));
+        $this->get(route('bookings.index', ['page' => 2]))
+            ->assertInertia(fn (Assert $page) => $page->has('bookings.data', 1)->where('bookings.current_page', 2));
     }
 
     public function test_customer_sees_a_clear_financial_label_for_a_booking_awaiting_approval(): void
@@ -103,7 +121,7 @@ class CustomerBookingManagementTest extends TestCase
 
         $this->withoutVite()->actingAs($customer)->get(route('bookings.index'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('bookings.0.financial_status_label', 'Payment not due yet'));
+                ->where('bookings.data.0.financial_status_label', 'Payment not due yet'));
         $this->withoutVite()->actingAs($customer)->get(route('bookings.show', $booking))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('booking.financial_status_label', 'Payment not due yet'));
