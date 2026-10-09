@@ -19,6 +19,7 @@ yarn-error.log
 /storage/*.key
 /storage/pail
 /storage/app/private
+/design-references/
 
 # Environment
 .env
