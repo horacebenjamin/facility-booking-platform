@@ -2388,68 +2388,80 @@ The application's most important integrity guarantees have automated concurrency
 
 ---
 
-# M25 — Accessibility & Responsive UX Hardening
+# M25 — Product UI, Accessibility & Responsive UX
 
 ## Objective
 
-Validate core workflows against responsive requirements and the WCAG 2.2 AA target.
+Create a cohesive, credible product UI across customer, management and operations
+experiences while preserving all existing functionality and domain rules.
+Visual improvements are intentionally part of M25. Implement accessibility in
+every stage against the WCAG 2.2 AA target and verify responsive workflows.
 
 ## Business Value
 
-Makes the product usable by a wider range of customers and staff while reducing accessibility risk.
+Makes the existing workflows clear, commercially credible and usable across the
+intended devices while reducing accessibility risk.
 
 ## Requirements Covered
 
-ACCESS and RESP requirements.
+Existing visual/interaction design requirements, ACCESS and RESP requirements.
+The implementation contract is [design-system.md](design-system.md).
 
 ## Dependencies
 
-Complete primary interfaces.
+M01–M24 workflows and security/concurrency safeguards; the existing Vue and
+Filament interfaces and approved visual references.
 
 ## Implement
 
-Review customer journeys across:
+Implement in bounded stages:
 
-- mobile;
-- tablet;
-- desktop.
+1. **M25A.1 — Design Contract and Visual Foundations** (current implementation
+   task): scope reconciliation, static product/operator identity, semantic
+   light/dark tokens, Instrument Sans conventions, shared pattern contracts and
+   minimal CSS/primitive foundations. Document Vue/Filament boundaries.
+2. **M25A.2 — Shared Layouts, Navigation and Reusable Components**: first
+   substantial visible redesign; adopt branding in Vue shells, accessible
+   responsive navigation and composed shared UI/feedback/state patterns.
+3. **M25B — Customer Experience**: improve existing customer journeys, discovery,
+   availability, booking review and account screens using current workflows.
+4. **M25C — Management Experience**: native Filament theming, dashboard and
+   actionable data/table/form presentation, preserving staff permissions.
+5. **M25D — Operations Experience**: mobile/tablet schedule, Now/Next and
+   operational clarity using existing authorised schedule data.
+6. **M25E — Accessibility, Responsive Verification and Final Polish**: final
+   deliberate accessibility and responsive review across all experiences.
 
-Review Operations heavily for mobile/tablet use.
-
-Review Management for sensible responsive degradation.
-
-Validate:
-
-- keyboard navigation;
-- focus;
-- headings;
-- labels;
-- validation;
-- contrast;
-- non-colour status communication;
-- dialogs;
-- tables;
-- dynamic updates;
-- touch targets;
-- reduced motion where applicable.
-
-Review error/empty/loading states.
+Throughout every stage, verify appropriate headings, labels, keyboard/focus,
+validation, contrast, textual status, dialogs, dynamic updates, touch targets,
+reduced motion and loading/error/empty states. Review customer phone/tablet/
+desktop journeys, operations mobile/tablet use and sensible management reflow.
 
 ## Do Not Implement Yet
 
-Unrelated visual redesign.
+Missing mockup-only product features are not automatically in scope. Do not
+introduce tenancy, new payment flows, domain or permission changes. Preserve
+M23 security and M24 data-integrity/concurrency safeguards. Future runtime AI
+functionality remains in M28–M30. Each task must respect its own stage boundary.
 
 ## Tests Required
 
-Automated accessibility checks where useful plus deliberate manual workflow testing.
+Use focused checks appropriate to the change: frontend checks/build for relevant
+foundations; meaningful affected behaviour tests when needed; useful automated
+accessibility checks plus deliberate browser, keyboard and screen-reader review.
+Styling-only changes do not require mirrored implementation tests.
 
 ## Acceptance Criteria
 
-Primary workflows are usable across intended devices and meet the accessibility target to an appropriate production standard.
+Primary workflows share the approved visual contract, retain existing behaviour
+and are usable across intended devices. Accessibility evidence covers the WCAG
+2.2 AA target, including light/dark contrast, focus and non-colour status.
 
 ## Definition of Done
 
-Accessibility and responsive behaviour have been deliberately tested rather than assumed.
+All stages have their acceptance evidence; accessibility and responsive behaviour
+have been deliberately tested rather than assumed. M25 is not complete at the
+foundations stage. Final cross-experience acceptance belongs to M25E.
 
 ---
 
@@ -3593,7 +3605,8 @@ The following decisions remain intentionally deferred until the milestone where 
 
 - final fictional product name;
 - final branding/logo;
-- exact design tokens;
+- remaining experience-specific token adoption (M25A.1 values are defined in
+  [design-system.md](design-system.md));
 - exact fictional pricing;
 - exact hold duration;
 - exact payment deadline;

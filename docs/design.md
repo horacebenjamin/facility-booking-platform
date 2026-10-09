@@ -1327,7 +1327,9 @@ The palette should communicate:
 - modernity;
 - sufficient energy for a facility/venue product.
 
-Exact colour values should be established when the design system is implemented and validated for accessibility.
+The chosen semantic light/dark palette and verified combinations are defined in
+[design-system.md](design-system.md). Rendered accessibility validation remains
+part of each M25 stage and the final M25E review.
 
 ---
 
@@ -1345,7 +1347,8 @@ It should use a modern sans-serif typeface providing:
 - strong numerical and monetary rendering;
 - suitable weight variation.
 
-The exact typeface should be selected and tested during creation of the visual design system.
+M25 retains the existing locally bundled Instrument Sans; its hierarchy and
+fallback conventions are defined in [design-system.md](design-system.md).
 
 ---
 
@@ -1626,6 +1629,21 @@ They should share:
 - product personality.
 
 Attempting to force both frameworks into pixel-identical implementations should not create unnecessary development complexity.
+
+## 45.5 M25 Implementation Contract
+
+[design-system.md](design-system.md) defines the shared brand, semantic colour,
+typography, spacing, focus and component contract. Facility4Hire identifies the
+product and staff workspaces; Sheffield Community Venues is the fictional
+customer/public demonstration operator. This is static presentation, not tenancy
+or a customer Organisation theme setting.
+
+M25A.1 implements limited Vue token and primitive foundations. M25A.2 adopts
+shared layouts, navigation and reusable patterns; customer, management and
+operations screen work follows in M25B–M25D. Accessibility is implemented
+throughout, with final verification in M25E. Existing domain rules, routes and
+authorised workflows remain authoritative; mockup-only features are not added
+automatically. Vue and Filament keep their native component and theme boundaries.
 
 ---
 
@@ -2537,7 +2555,8 @@ These may include:
 - semantic colours;
 - other recurring visual decisions.
 
-Exact implementation will be determined during architecture and frontend setup.
+The M25 token implementation and frontend boundaries are specified in
+[design-system.md](design-system.md); later stages adopt these in each experience.
 
 ---
 

@@ -9,6 +9,7 @@ It complements:
 - `docs/discovery.md` — business context and historical discovery;
 - `docs/requirements.md` — functional and non-functional requirements;
 - `docs/design.md` — UX, workflows and interaction design;
+- [docs/design-system.md](design-system.md) — M25 engineering contract and verified tokens;
 - `docs/architecture.md` — technical architecture;
 - `docs/implementation-plan.md` — implementation sequence.
 
@@ -53,6 +54,9 @@ those elements MUST NOT automatically be implemented.
 
 Mock-ups should be interpreted as visual references rather than pixel-perfect specifications.
 
+[design-system.md](design-system.md) records the approved implementation contract
+for these visual principles. It does not override requirements or UX behaviour.
+
 ---
 
 # 3. Product and Operator Branding
@@ -92,6 +96,13 @@ This is a fictional operator used to demonstrate the platform.
 It MUST NOT imply affiliation with the historical Active8, Interserve, Mitie, Sheffield schools or any other real organisation.
 
 The public-facing experience should primarily use Sheffield Community Venues branding.
+
+M25 adopts this as a static demonstration branding distinction: Facility4Hire
+identifies the product and staff workspaces; Sheffield Community Venues identifies
+the fictional public/customer operator. Accessible text/icon fallbacks and shell
+adoption are defined in [design-system.md](design-system.md). Customer booking
+organisations do not select the operator brand. No tenant branding configuration,
+branding models or administration is part of M25.
 
 Facility4Hire may be referenced subtly where appropriate, for example:
 
@@ -180,7 +191,9 @@ The approved visual direction uses a combination of:
 - neutral whites and greys;
 - restrained semantic colours.
 
-Exact colour tokens should be finalised during frontend implementation using accessible contrast ratios.
+Chosen light/dark tokens and measured foreground/background ratios are recorded
+in [design-system.md](design-system.md#3-semantic-colours-and-verified-combinations).
+M25A.1 establishes the Vue foundations; Filament theme adoption follows in M25C/M25D.
 
 The visual intention is more important than copying colours directly from generated mock-ups.
 
@@ -205,7 +218,9 @@ It provides the professional and operational character of the product.
 
 ## 6.2 Teal / Green
 
-Teal and green provide the main brand/action accent.
+Teal supplies primary actions and selected accents. Green supplies successful
+states and availability, with explicit text. Keep action and success meanings
+distinct; use the semantic pairs in [design-system.md](design-system.md).
 
 Typical uses:
 
@@ -1951,7 +1966,7 @@ Reuse should improve consistency without forcing unrelated workflows into inappr
 
 # 64. Design Tokens
 
-The implementation should define reusable design tokens for:
+The M25 contract in [design-system.md](design-system.md) defines reusable values for:
 
 - colours;
 - spacing;
